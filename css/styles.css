@@ -1,0 +1,76 @@
+:root{
+  --bg:#0f1117; --panel:#161925; --panel2:#1d2130; --border:#2a2f42;
+  --text:#e8eaf2; --muted:#9aa1b8; --accent:#6ee7b7; --accent2:#60a5fa;
+  --warn:#fbbf24; --err:#f87171; --ok:#34d399; --code-bg:#0b0d14; --radius:10px;
+}
+[data-theme="light"]{
+  --bg:#f6f7fb; --panel:#ffffff; --panel2:#eef0f8; --border:#dfe3f0;
+  --text:#1b1f2e; --muted:#5b6178; --accent:#0e9f6e; --accent2:#2563eb;
+  --code-bg:#f0f2fa;
+}
+*{box-sizing:border-box}
+body{margin:0;font-family:-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;background:var(--bg);color:var(--text);transition:background .2s,color .2s}
+a{color:var(--accent2)}
+#app{display:flex;min-height:100vh}
+#sidebar{width:290px;flex-shrink:0;background:var(--panel);border-right:1px solid var(--border);padding:18px 12px;overflow-y:auto;max-height:100vh;position:sticky;top:0;display:flex;flex-direction:column}
+.brand{display:flex;justify-content:space-between;align-items:center;padding:0 8px}
+.brand h1{font-size:17px;margin:4px 0 2px}
+.sub{font-size:12px;color:var(--muted);margin:0 8px 12px}
+#themeBtn{background:none;border:1px solid var(--border);border-radius:8px;width:32px;height:32px;cursor:pointer;font-size:15px;color:var(--text)}
+#searchBox{margin:6px 8px 10px;width:calc(100% - 16px);padding:8px 10px;border-radius:8px;border:1px solid var(--border);background:var(--panel2);color:var(--text);font-size:13px}
+#progressWrap{margin:0 8px 14px;background:var(--panel2);border-radius:8px;padding:8px 10px}
+#progressBar{height:6px;background:var(--border);border-radius:4px;overflow:hidden;margin-top:6px}
+#progressFill{height:100%;background:linear-gradient(90deg,var(--accent),var(--accent2));width:0%;transition:width .3s}
+#progressText{font-size:11px;color:var(--muted)}
+.catlabel{font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin:14px 8px 4px}
+nav ul{list-style:none;margin:0;padding:0}
+nav li{margin:2px 0}
+nav button{width:100%;text-align:left;background:none;border:none;color:var(--text);padding:9px 10px;border-radius:8px;cursor:pointer;font-size:13.5px;display:flex;gap:8px;align-items:center}
+nav button:hover{background:var(--panel2)}
+nav button.active{background:var(--panel2);color:var(--accent);font-weight:600}
+nav .chk{width:15px;height:15px;border-radius:50%;border:2px solid var(--muted);flex-shrink:0}
+nav .chk.done{background:var(--ok);border-color:var(--ok)}
+.sidefoot{margin-top:auto;padding:10px 8px 0;border-top:1px solid var(--border);display:flex;gap:8px}
+.sidefoot button{flex:1;font-size:11.5px;background:var(--panel2);border:1px solid var(--border);color:var(--text);border-radius:7px;padding:7px 4px;cursor:pointer}
+#pyStatus{font-size:12px;color:var(--muted);margin:0 8px 4px}
+main{flex:1;padding:34px 44px;max-width:900px;margin:0 auto}
+h2.modtitle{font-size:26px;margin:0 0 4px}
+.modmeta{color:var(--muted);font-size:13px;margin-bottom:22px;display:flex;gap:10px;align-items:center}
+.badge{background:var(--panel2);border:1px solid var(--border);border-radius:20px;padding:2px 10px;font-size:11px}
+section.block{margin-bottom:24px}
+.theory{line-height:1.65;font-size:15.5px}
+.theory code{background:var(--code-bg);padding:2px 6px;border-radius:5px;font-size:13.5px}
+.callout{border-left:3px solid var(--accent2);background:var(--panel2);padding:10px 14px;border-radius:0 8px 8px 0;margin:14px 0;font-size:14px}
+.callout.tip{border-color:var(--accent)}
+.callout.warn{border-color:var(--warn)}
+.editor-wrap{background:var(--panel2);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;margin:12px 0}
+.editor-head{display:flex;justify-content:space-between;align-items:center;padding:8px 12px;background:var(--panel);font-size:12px;color:var(--muted)}
+.editor-head button{background:var(--accent);border:none;color:#0f1117;font-weight:700;padding:6px 14px;border-radius:6px;cursor:pointer;font-size:12.5px}
+.editor-head button:disabled{opacity:.5;cursor:wait}
+.editor-head .reset{background:none;color:var(--muted);border:1px solid var(--border);font-weight:400}
+textarea.code{width:100%;background:var(--code-bg);color:#d1e0ff;border:none;padding:14px;font-family:ui-monospace,Consolas,monospace;font-size:13.5px;min-height:110px;resize:vertical;outline:none;line-height:1.5}
+[data-theme="light"] textarea.code{color:#1b1f2e}
+.output{background:#080a10;border-top:1px solid var(--border);padding:10px 14px;font-family:ui-monospace,Consolas,monospace;font-size:13px;white-space:pre-wrap;min-height:20px;color:#c9f7d6}
+[data-theme="light"] .output{background:#12141c;color:#8ff0b0}
+.output.err{color:var(--err)}
+.exercise{border:1px solid var(--border);border-radius:var(--radius);padding:16px;background:var(--panel)}
+.exercise h4{margin:0 0 8px;font-size:15px;color:var(--accent)}
+details summary{cursor:pointer;color:var(--accent2);font-size:13.5px;margin-top:8px}
+.navfoot{display:flex;justify-content:space-between;margin-top:36px;padding-top:18px;border-top:1px solid var(--border)}
+.navfoot button{background:var(--panel2);color:var(--text);border:1px solid var(--border);padding:9px 16px;border-radius:8px;cursor:pointer}
+.navfoot button:hover{border-color:var(--accent2)}
+.donebtn{display:inline-flex;align-items:center;gap:6px;background:none;border:1px solid var(--border);color:var(--muted);padding:6px 12px;border-radius:20px;cursor:pointer;font-size:12.5px;margin-bottom:18px}
+.donebtn.done{color:var(--ok);border-color:var(--ok)}
+.hero{background:linear-gradient(135deg,var(--panel2),var(--panel));border:1px solid var(--border);border-radius:16px;padding:32px}
+.hero h2{margin-top:0;font-size:30px}
+.startbtn{background:var(--accent);color:#0f1117;border:none;padding:12px 22px;border-radius:9px;font-weight:700;cursor:pointer;font-size:14.5px;margin-top:14px}
+.cert{border:2px solid var(--accent);border-radius:16px;padding:40px;text-align:center;background:var(--panel2)}
+.cert h2{font-size:26px}
+.cert input{padding:9px 14px;border-radius:8px;border:1px solid var(--border);background:var(--panel);color:var(--text);font-size:14px;margin:12px 0;width:260px;text-align:center}
+.cert .startbtn{margin-top:6px}
+@media(max-width:820px){
+  #app{flex-direction:column}
+  #sidebar{width:100%;position:relative;max-height:none;border-right:none;border-bottom:1px solid var(--border)}
+  main{padding:22px 18px}
+}
+@media print{ #sidebar,.navfoot,.donebtn{display:none} main{max-width:100%} }
