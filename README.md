@@ -11,6 +11,7 @@ Curso interactivo de Python para principiantes, con Python ejecutándose de verd
 ```
 aprende-python-v1.3/
 ├── index.html          → página principal
+├── icon.svg            → icono de la pestaña y de la marca
 ├── README.md
 ├── css/
 │   └── styles.css       → estilos, tema claro/oscuro
