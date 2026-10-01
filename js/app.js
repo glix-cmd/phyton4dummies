@@ -1,7 +1,7 @@
 let currentId = 0; // 0 = bienvenida, 1..17 = módulos, 'cert' = certificado
-const CATS = ["Fundamentos","Intermedio","Avanzado"];
+const CATS = ["Fundamentos","Intermedio","Avanzado","Ciencia de datos","Bioinformática"];
 
-function catIcon(c){ return c==="Fundamentos"?"🌱":c==="Intermedio"?"⚙️":"🚀"; }
+function catIcon(c){ return {"Fundamentos":"🌱","Intermedio":"⚙️","Avanzado":"🚀","Ciencia de datos":"📊","Bioinformática":"🧬"}[c] || "📘"; }
 
 function renderNav(){
   const p = getProgress();
@@ -24,13 +24,18 @@ function renderNav(){
 }
 
 function renderWelcome(){
+  const total = MODULES.length, hechos = countDone();
+  const porCat = CATS.map(c => `<li>${catIcon(c)} <b>${c}</b>: ${MODULES.filter(m=>m.cat===c).map(m=>m.id).join(', ')}</li>`).join('');
+  const ultimo = parseInt(localStorage.getItem(LAST_KEY)) || 1;
   document.getElementById('main').innerHTML = `
   <div class="hero">
     <h2>🐍 Aprende Python desde cero</h2>
-    <p>Un curso interactivo de 17 módulos pensado para quien nunca ha programado. Cada lección combina teoría breve, ejemplos ejecutables de verdad (Python corre en tu navegador con Pyodide) y ejercicios con solución explicada.</p>
-    <p><b>Cómo usar esta web:</b> navega por el menú lateral, agrupado en Fundamentos → Intermedio → Avanzado. Escribe y ejecuta código en cada bloque, marca los módulos como completados y tu progreso se guarda automáticamente en este navegador. Puedes exportarlo como archivo si cambias de ordenador.</p>
-    <p><b>Requisitos:</b> ninguno. Solo un navegador moderno y conexión a internet la primera vez (para cargar Python, ~10&nbsp;MB).</p>
-    <button class="startbtn" onclick="goTo(${countDone()>0 ? (localStorage.getItem(LAST_KEY)||1) : 1})">Comenzar →</button>
+    <p>Un curso interactivo de <b>${total} módulos</b> que te lleva desde tu primer <code>print()</code> hasta analizar secuencias, estructuras de proteínas y fármacos. Python se ejecuta de verdad en tu navegador (Pyodide), con NumPy, pandas, SciPy, Matplotlib, Seaborn, Biopython y scikit-learn disponibles sin instalar nada. RDKit (módulos 36-38) no existe para el navegador: esos módulos traen cuadernos de Google Colab en la carpeta <code>notebooks/</code>.</p>
+    <ul class="tracks">${porCat}</ul>
+    <p><b>En cada módulo encontrarás:</b> explicación breve, celdas de código editables, conceptos clave, errores habituales, ejercicios con <b>autocorrección</b> (botón ✔ Comprobar) y solución explicada, preguntas tipo test y un resumen final.</p>
+    <p><b>Datos reales:</b> el disco virtual incluye archivos del curso: <code>P04637.fasta</code> (p53), <code>citocromo_c.fasta</code>, <code>ejemplo.fastq</code>, <code>1TUP_cadenaB.pdb</code>, <code>aspirin.mol</code>, <code>Planetas.txt</code>, <code>housing.csv</code>, <code>heteromoleculas.csv</code>, <code>archivo.txt</code>, <code>ciudades.tsv</code> y los datasets clásicos <code>iris.csv</code>, <code>tips.csv</code> y <code>titanic.csv</code>.</p>
+    <p><b>Consejos:</b> ejecuta las celdas en orden (comparten memoria, como en Colab) · <span class="kbd">Ctrl+Enter</span> ejecuta · <span class="kbd">Tab</span> indenta · las flechas ← → del teclado cambian de módulo · tu progreso se guarda solo en este navegador (expórtalo si cambias de equipo).</p>
+    <button class="startbtn" onclick="goTo(${hechos>0 ? ultimo : 1})">${hechos>0 ? `Continuar (módulo ${ultimo}) →` : 'Comenzar →'}</button>
   </div>`;
 }
 
@@ -47,7 +52,7 @@ function renderCert(){
   const name = localStorage.getItem(NAME_KEY) || '';
   main.innerHTML = `<div class="cert">
     <h2>🎓 ¡Curso completado!</h2>
-    <p>Has terminado los 17 módulos de "Aprende Python desde cero". Escribe tu nombre para tu certificado:</p>
+    <p>Has terminado los ${total} módulos de "Aprende Python desde cero". Escribe tu nombre para tu certificado:</p>
     <input id="certName" placeholder="Tu nombre" value="${name}">
     <br>
     <button class="startbtn" onclick="saveNameAndPrint()">🖨️ Generar e imprimir</button>

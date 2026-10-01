@@ -1,38 +1,71 @@
-# Aprende Python desde cero — v1.3
+# Aprende Python desde cero — v2.4
 
-Curso interactivo de Python para principiantes, con Python ejecutándose de verdad en el navegador (Pyodide), sin instalar nada.
+Curso interactivo de **38 módulos** que va desde el primer `print()` hasta el análisis de secuencias, estructuras de proteínas y fármacos. Python se ejecuta de verdad en el navegador gracias a [Pyodide](https://pyodide.org): NumPy, pandas, SciPy, Matplotlib, Seaborn, Biopython y scikit-learn sin instalar nada. **Excepción: RDKit** (módulos 36, 37 y el Proyecto C del 38) no existe para el navegador; para esos módulos hay cuadernos de Colab en `notebooks/`.
 
 ## Cómo usarlo
-1. Descomprime la carpeta completa (no muevas `index.html` fuera de ella: necesita `css/` y `js/`).
-2. Abre `index.html` con doble clic, o sírvelo con un servidor local (extensión "Live Server" de VS Code, o `python -m http.server` dentro de la carpeta).
-3. La primera vez que ejecutes código, Python tardará unos segundos en cargar (~10 MB, requiere internet). Después funciona con normalidad.
+1. Descomprime la carpeta completa (no saques `index.html`: necesita `css/` y `js/`).
+2. Abre `index.html` en el navegador, o mejor sírvelo en local (extensión *Live Server* de VS Code, o `python -m http.server` dentro de la carpeta y abre `http://localhost:8000`). Con doble clic (`file://`) algunas APIs pueden rechazar las peticiones.
+3. Necesitas internet la primera vez: Python (~10 MB) y cada librería se descargan al usarlas por primera vez.
+
+## Temario
+| Bloque | Módulos |
+|---|---|
+| 🌱 Fundamentos | 1 Qué es Python · 2 print y sintaxis · 3 Variables, tipos y booleanos · 4 Operadores · 5 Entrada/salida · 6 Condicionales · 7 Bucles · 8 Funciones, lambda y recursividad |
+| ⚙️ Intermedio | 9 Funciones nativas · 10 Colecciones · 11 Cadenas · 12 Expresiones regulares · 13 math, random y os · 14 Excepciones · 15 Archivos |
+| 🚀 Avanzado | 16 POO y herencia · 17 Comprensiones y generadores · 18 Depuración y complejidad · 19 Proyectos |
+| 📊 Ciencia de datos | 20 NumPy I · 21 NumPy II (biología) · 22 SciPy · 23 pandas I · 24 pandas II (+ PyArrow/Polars) · 25 Matplotlib · 26 Seaborn (+ comparación) · 27 PIL |
+| 🧬 Bioinformática | 28 Biopython: Seq y SeqUtils · 29 FASTA/FASTQ · 30 Alineamientos · 31 Estructuras PDB/mmCIF · 32 APIs I: UniProt · 33 APIs II: RCSB PDB, descargas y mapeo de IDs · 34 APIs III: PubChem, ChEMBL y ChEBI · 35 APIs IV: Entrez y cBioPortal · 36 RDKit I · 37 RDKit II · 38 Proyectos finales |
+
+## Qué incluye cada módulo
+Explicación breve · celdas editables (`Ctrl+Enter` ejecuta, `Tab` indenta) · conceptos clave · errores habituales · ejercicios con **autocorrección** (✔ Comprobar) y solución explicada con código · preguntas tipo test · resumen.
 
 ## Estructura
 ```
-aprende-python-v1.3/
-├── index.html          → página principal
-├── icon.svg            → icono de la pestaña y de la marca
+├── index.html
 ├── README.md
-├── css/
-│   └── styles.css       → estilos, tema claro/oscuro
+├── notebooks/                 → cuadernos Jupyter/Colab de RDKit (módulos 36, 37 y proyecto del 38)
+├── css/styles.css             → estilos, tema claro/oscuro
 └── js/
     ├── data/
-    │   └── modules.js    → contenido de los 17 módulos
-    ├── pyRunner.js        → ejecución de Python vía Pyodide
-    ├── progress.js        → guardado/exportado del progreso
-    └── app.js             → navegación, búsqueda, certificado, tema
+    │   ├── datasets.js         → archivos de datos del curso (disco virtual de Python)
+    │   ├── modules.js          → helpers de contenido + módulos 1-18
+    │   ├── modules-ciencia.js  → módulos 19-22
+    │   └── modules-bio.js      → módulos 23-30
+    ├── pyRunner.js             → motor Pyodide: librerías, gráficos, APIs, autocorrección
+    ├── progress.js             → progreso (localStorage, exportar/importar)
+    └── app.js                  → navegación, búsqueda, bienvenida, certificado, tema
 ```
 
-## Novedades v1.3
-- Contenido ampliado en los módulos de Bucles, Funciones, Errores y Archivos con ejemplos y ejercicios reales de material de curso: `continue/pass/break`, funciones `lambda`, recursividad (factorial), bloque `finally`, y un patrón más completo de lectura/escritura de archivos.
+## RDKit: cuadernos de Colab
+1. Entra en https://colab.research.google.com → *Archivo → Subir cuaderno* y elige uno de `notebooks/`.
+2. Ejecuta todas las celdas (*Entorno de ejecución → Ejecutar todo*). La primera instala RDKit y la segunda crea los archivos de datos.
+3. Cada ejercicio trae su celda de comprobación (✅ si lo has resuelto) y la solución explicada.
+Funcionan igual en tu ordenador con Jupyter (`pip install rdkit seaborn`).
 
-## Novedades v1.2
-- Reorganización en carpetas (antes era un único archivo).
-- Tema claro/oscuro.
-- Buscador de módulos en el menú lateral, agrupados por Fundamentos / Intermedio / Avanzado.
-- Pantalla de bienvenida y certificado final imprimible.
-- Exportar/importar tu progreso como archivo `.json` (útil para cambiar de ordenador).
-- Navegación con las flechas del teclado (← →).
+## Funciones de ayuda disponibles en las celdas
+- `await web.get(url, params=...)` y `await web.post(url, json=... | data=...)`: sustituto de `requests` para el navegador (misma interfaz: `.status_code`, `.json()`, `.text`, `.raise_for_status()`).
+- `await obtener_json(url)` y `await obtener_texto(url)`: atajos que devuelven directamente el JSON o el texto (con reintentos y errores explicados).
+- `await probar_apis()`: comprueba qué servicios responden desde tu navegador.
+- `mostrar_molecula(mol)`, `mostrar_svg(svg)`, `mostrar_imagen(img_pil)`: visualización.
+- Los gráficos de Matplotlib/Seaborn se muestran automáticamente; `input()` abre una ventana del navegador.
+
+## Datos incluidos
+`P04637.fasta` (p53), `citocromo_c.fasta`, `ejemplo2.fasta`, `ejemplo.fastq` (30 lecturas nanopore 18S), `1TUP_cadenaB.pdb` (p53-ADN, cadena B), `aspirin.mol`, `Planetas.txt`, `housing.csv` (muestra de 2000 viviendas) `heteromoleculas.csv`, `archivo.txt` (separado por `;`), `ciudades.tsv` y los datasets de seaborn `iris.csv`, `tips.csv` y `titanic.csv`.
+
+## Limitaciones
+- Las celdas con APIs necesitan conexión; si un servicio bloquea peticiones desde el navegador (CORS), usa la versión con `requests` indicada en el módulo.
+- Polars, PyArrow, ChEMBL/ChEBI clients, Entrez de Biopython y Clustal se muestran como código para ejecutar en tu ordenador.
 
 ## Ampliar el curso
-Para añadir o editar un módulo, edita `js/data/modules.js`: cada módulo es un objeto `{id, cat, title, body}`. Las funciones auxiliares `codeBlock()`, `tip()`, `warn()`, `note()` y `exercise()` generan el HTML de cada bloque.
+Cada módulo es un objeto `{id, cat, title, body}` en `js/data/`. Helpers: `codeBlock`, `staticCode`, `exercise(título, enunciado, inicial, explicación, test, solución)`, `quiz`, `tip`, `warn`, `concepto`, `resumen`, `origen`.
+
+## Historial
+- **v2.4** — Integración completa de los scripts de `clase_5` (APIs). El antiguo módulo de APIs se divide en cuatro: 32 UniProt (códigos de estado, parámetros, búsquedas y encadenado de consultas), 33 RCSB PDB (datos, búsqueda por secuencia, texto y similitud estructural, descarga de PDB/CIF al disco virtual y mapeo PDB→UniProt con sondeo del trabajo asíncrono), 34 PubChem + ChEMBL + ChEBI (los equivalentes REST de `pubchempy` y `chembl_webresource_client`) y 35 Entrez + cBioPortal. Nuevo objeto `web` (requests asíncrono con `params`, POST JSON/formulario y códigos de estado sin excepción) y ChEMBL en el diagnóstico. RDKit pasa a los módulos 36-38 y sus cuadernos se renombran. Errores de los scripts originales explicados: IDs de relleno que detienen la descarga, resultados de idmapping pedidos antes de que termine el trabajo, `CHEMBL113` etiquetado como aspirina (es cafeína), `CHEBI:17597` descrito como glucosa (es `CHEBI:17234`), consulta de Tourette con nombre y comentario de glioblastoma, SMILES sin escapar en la URL, `substance_id` que contenía un CID y mensaje copiado de otra consulta.
+- **v2.3** — RDKit no existe para Python en el navegador (ni en Pyodide, ni como rueda WebAssembly), así que los módulos 33, 34 y el Proyecto C del 35 pasan a mostrar el código para Colab/tu ordenador, con un aviso claro. Se añaden 3 cuadernos `.ipynb` (instalación, datos, ejercicios con comprobación y soluciones) validados con RDKit real. Se retira la promesa de "RDKit sin instalar nada".
+- **v2.2** — Capa de red más robusta para las APIs: reintentos automáticos (429/502/503/504), tiempo máximo de 25 s, mensajes de error en español que distinguen "sin conexión / CORS" de errores HTTP (404, 403...) y de respuestas que no son JSON. Nueva celda de diagnóstico `await probar_apis()` al inicio del módulo 32 que comprueba UniProt, RCSB, PubChem, Entrez y cBioPortal. PubChem: la búsqueda por fórmula ahora gestiona la respuesta "Waiting".
+- **v2.1** — clase_3 y clase_4 integradas al completo. Nuevo módulo 12 de expresiones regulares (grupos, `\b`, correos, parseo de PDB con regex y gráfico 3D de la proteína). Módulo 13 ampliado (`choices` vs `sample`, `randrange`, `uniform`, gestión de archivos con `os`, media geométrica). El bloque de Ciencia de datos pasa de 4 a 8 módulos: NumPy I y II, SciPy, pandas I y II (merge, groupby, delimitadores, referencia vs copia, PyArrow y Polars), Matplotlib, Seaborn con Matplotlib vs Seaborn, y PIL con análisis de imagen como array. Datasets reales de seaborn incluidos en el disco virtual. Errores de los scripts originales explicados: `reshape` usado como trasposición, `replace=False` con más elementos de los disponibles, `plt.title` tras `pairplot`, `how='outer'` en Polars ≥ 1.0, `palette` sin `hue` en seaborn 0.13, coordenadas PDB con `split()`, variables no definidas (`current_directory`, `eleccion_con_reemplazo`).
+- **v2.0** — Integración completa del material de clase (scripts 1-19, clase_3, clase_4, clase_5, Biopython clases 6-7, clase_8 repaso y clase_9 RDKit): 12 módulos nuevos (19-30) y módulos 1-18 ampliados (regex, math/random/os, herencia, complejidad algorítmica). Motor nuevo con carga automática de librerías, gráficos, `input()` real, disco virtual con datos, APIs y autocorrección. Quizzes y resúmenes en todos los módulos. Corregidos errores de los scripts originales (búsqueda binaria que llamaba a la lineal, `.c()` en RDKit, `squared=False` en scikit-learn, escalado antes del split, `%` en `ajustar_actividad`) y el botón "reiniciar" con código que contenía comillas.
+- **v1.3** — Primeros refuerzos de bucles, funciones, errores y archivos; nuevo módulo de funciones nativas.
+- **v1.2** — Estructura por carpetas, tema claro/oscuro, buscador, certificado, exportar/importar progreso.
+
+Material base de los ejemplos: scripts del curso de Python del máster (profesor C. Hinojosa), adaptados y corregidos para uso educativo personal.
