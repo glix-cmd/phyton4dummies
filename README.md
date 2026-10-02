@@ -1,6 +1,6 @@
-# Aprende Python desde cero — v2.4
+# Aprende Python desde cero — v2.6
 
-Curso interactivo de **38 módulos** que va desde el primer `print()` hasta el análisis de secuencias, estructuras de proteínas y fármacos. Python se ejecuta de verdad en el navegador gracias a [Pyodide](https://pyodide.org): NumPy, pandas, SciPy, Matplotlib, Seaborn, Biopython y scikit-learn sin instalar nada. **Excepción: RDKit** (módulos 36, 37 y el Proyecto C del 38) no existe para el navegador; para esos módulos hay cuadernos de Colab en `notebooks/`.
+Curso interactivo de **43 módulos** que va desde el primer `print()` hasta el análisis de secuencias, estructuras de proteínas y fármacos. Python se ejecuta de verdad en el navegador gracias a [Pyodide](https://pyodide.org): NumPy, pandas, SciPy, Matplotlib, Seaborn, Biopython y scikit-learn sin instalar nada. **Excepción: RDKit** (módulos 36, 37 y el Proyecto C del 38) no existe para el navegador; para esos módulos hay cuadernos de Colab en `notebooks/`.
 
 ## Cómo usarlo
 1. Descomprime la carpeta completa (no saques `index.html`: necesita `css/` y `js/`).
@@ -15,6 +15,10 @@ Curso interactivo de **38 módulos** que va desde el primer `print()` hasta el a
 | 🚀 Avanzado | 16 POO y herencia · 17 Comprensiones y generadores · 18 Depuración y complejidad · 19 Proyectos |
 | 📊 Ciencia de datos | 20 NumPy I · 21 NumPy II (biología) · 22 SciPy · 23 pandas I · 24 pandas II (+ PyArrow/Polars) · 25 Matplotlib · 26 Seaborn (+ comparación) · 27 PIL |
 | 🧬 Bioinformática | 28 Biopython: Seq y SeqUtils · 29 FASTA/FASTQ · 30 Alineamientos · 31 Estructuras PDB/mmCIF · 32 APIs I: UniProt · 33 APIs II: RCSB PDB, descargas y mapeo de IDs · 34 APIs III: PubChem, ChEMBL y ChEBI · 35 APIs IV: Entrez y cBioPortal · 36 RDKit I · 37 RDKit II · 38 Proyectos finales |
+| 🤖 Aprendizaje automático | 39 Regresión y sobreajuste · 40 Clasificación y fronteras de decisión · 41 Pingüinos y reseñas (texto) · 42 Redes neuronales con dígitos · 43 Clustering: K-means y DBSCAN |
+
+## Atajos
+`Ctrl+Enter` (o `Shift+Enter`) ejecuta la celda · `Ctrl+K` o `/` abre la búsqueda de módulos · `Alt+←` / `Alt+→` cambian de módulo · `Esc` cierra la búsqueda.
 
 ## Qué incluye cada módulo
 Explicación breve · celdas editables (`Ctrl+Enter` ejecuta, `Tab` indenta) · conceptos clave · errores habituales · ejercicios con **autocorrección** (✔ Comprobar) y solución explicada con código · preguntas tipo test · resumen.
@@ -22,6 +26,7 @@ Explicación breve · celdas editables (`Ctrl+Enter` ejecuta, `Tab` indenta) · 
 ## Estructura
 ```
 ├── index.html
+├── icon.svg, icon-180.png, icon-512.png   → icono de la web (favicon y acceso directo)
 ├── README.md
 ├── notebooks/                 → cuadernos Jupyter/Colab de RDKit (módulos 36, 37 y proyecto del 38)
 ├── css/styles.css             → estilos, tema claro/oscuro
@@ -30,7 +35,8 @@ Explicación breve · celdas editables (`Ctrl+Enter` ejecuta, `Tab` indenta) · 
     │   ├── datasets.js         → archivos de datos del curso (disco virtual de Python)
     │   ├── modules.js          → helpers de contenido + módulos 1-18
     │   ├── modules-ciencia.js  → módulos 19-22
-    │   └── modules-bio.js      → módulos 23-30
+    │   ├── modules-bio.js      → módulos 28-38
+    │   └── modules-ml.js       → módulos 39-43
     ├── pyRunner.js             → motor Pyodide: librerías, gráficos, APIs, autocorrección
     ├── progress.js             → progreso (localStorage, exportar/importar)
     └── app.js                  → navegación, búsqueda, bienvenida, certificado, tema
@@ -60,6 +66,8 @@ Funcionan igual en tu ordenador con Jupyter (`pip install rdkit seaborn`).
 Cada módulo es un objeto `{id, cat, title, body}` en `js/data/`. Helpers: `codeBlock`, `staticCode`, `exercise(título, enunciado, inicial, explicación, test, solución)`, `quiz`, `tip`, `warn`, `concepto`, `resumen`, `origen`.
 
 ## Historial
+- **v2.6** — Clase 8 (repaso) y scripts de machine learning integrados. Nuevo bloque **Aprendizaje automático** (módulos 39-43): regresión lineal y árboles con *diabetes*, regresión polinómica y sobreajuste con viviendas de California, fronteras de decisión del cuaderno *Métodos supervisados* (logística, polinómica, SVM, árboles, random forest, MLP) con comparación train/test, pingüinos, análisis de sentimiento de reseñas de Amazon, redes neuronales con dígitos (`load_digits` en lugar de MNIST) y clustering K-means/DBSCAN con codo y silueta. En el módulo 38, proyectos E (PDB → UniProt → PubChem, `Script1.py`) y F (proteínas de neurodegeneración, `Script2.py`); en el 35, `get_study`, muestras y `pybioportal`; en el 31, nota sobre el umbral de `Script5.py`. Datos nuevos: `penguins.csv` y 2500 reseñas de `amazon_baby.csv`. Errores de los scripts explicados: listas de error train/test cruzadas, escalado antes del split, `fit_transform` dentro del `lambda`, SVM sobrescrito, MLP con activación identidad, solo precisión de entrenamiento, stopwords filtradas antes de normalizar, regresión lineal usada para clasificar, ejes de latitud/longitud intercambiados, ruta de Excel duplicada, `entryType` siempre verdadero, `molecular_weight` sin protección, f-strings con comillas anidadas (solo Python 3.12+). Icono propio: un *prompt* de terminal con un cursor de cuatro colores (A, C, G, T).
+- **v2.5** — Biopython de la clase 6 integrado (BIOPYTHON_1 a 4): validación de secuencias y `count_overlap`, GC calculado por error sobre una proteína, buscador de ORFs con la secuencia original completa y ejercicio de ORFs en las dos hebras, descarga de FASTA desde UniProt, probabilidad de error media frente a errores esperados por lectura, control de calidad tipo FastQC con 400 lecturas, árboles de distancias con `Bio.Phylo`, secuencias reales de hemoglobina e insulina desde UniProt, alineamiento múltiple real con Clustal Omega (API del EBI) y análisis completo de 1TUP (cadenas, `_mmcif_dict` frente a `MMCIF2Dict`, heteromoléculas a CSV). `1TUP.pdb`, `1TUP.cif` y `ejemplo_qc.fastq` añadidos al disco virtual. Rediseño completo con estética de IDE: explorador de archivos, pestaña, celdas con resaltado de sintaxis y numeración `In [n]` (CodeMirror), barra de estado del intérprete, paleta de comandos (Ctrl+K) que busca también dentro del contenido, portada con cromatograma de TP53, ejercicios superados que se recuerdan, tipografía IBM Plex + JetBrains Mono, paleta basada en los canales de un cromatograma y tema claro/oscuro.
 - **v2.4** — Integración completa de los scripts de `clase_5` (APIs). El antiguo módulo de APIs se divide en cuatro: 32 UniProt (códigos de estado, parámetros, búsquedas y encadenado de consultas), 33 RCSB PDB (datos, búsqueda por secuencia, texto y similitud estructural, descarga de PDB/CIF al disco virtual y mapeo PDB→UniProt con sondeo del trabajo asíncrono), 34 PubChem + ChEMBL + ChEBI (los equivalentes REST de `pubchempy` y `chembl_webresource_client`) y 35 Entrez + cBioPortal. Nuevo objeto `web` (requests asíncrono con `params`, POST JSON/formulario y códigos de estado sin excepción) y ChEMBL en el diagnóstico. RDKit pasa a los módulos 36-38 y sus cuadernos se renombran. Errores de los scripts originales explicados: IDs de relleno que detienen la descarga, resultados de idmapping pedidos antes de que termine el trabajo, `CHEMBL113` etiquetado como aspirina (es cafeína), `CHEBI:17597` descrito como glucosa (es `CHEBI:17234`), consulta de Tourette con nombre y comentario de glioblastoma, SMILES sin escapar en la URL, `substance_id` que contenía un CID y mensaje copiado de otra consulta.
 - **v2.3** — RDKit no existe para Python en el navegador (ni en Pyodide, ni como rueda WebAssembly), así que los módulos 33, 34 y el Proyecto C del 35 pasan a mostrar el código para Colab/tu ordenador, con un aviso claro. Se añaden 3 cuadernos `.ipynb` (instalación, datos, ejercicios con comprobación y soluciones) validados con RDKit real. Se retira la promesa de "RDKit sin instalar nada".
 - **v2.2** — Capa de red más robusta para las APIs: reintentos automáticos (429/502/503/504), tiempo máximo de 25 s, mensajes de error en español que distinguen "sin conexión / CORS" de errores HTTP (404, 403...) y de respuestas que no son JSON. Nueva celda de diagnóstico `await probar_apis()` al inicio del módulo 32 que comprueba UniProt, RCSB, PubChem, Entrez y cBioPortal. PubChem: la búsqueda por fórmula ahora gestiona la respuesta "Waiting".

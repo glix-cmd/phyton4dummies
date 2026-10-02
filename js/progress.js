@@ -8,13 +8,6 @@ function setDone(modId, done){
   localStorage.setItem(STORAGE_KEY, JSON.stringify(p));
   renderNav(); updateProgressBar();
 }
-function countDone(){ const p = getProgress(); return MODULES.filter(m => p[m.id]).length; }
-function updateProgressBar(){
-  const done = countDone();
-  document.getElementById('progressText').textContent = `${done} / ${MODULES.length} módulos`;
-  document.getElementById('progressFill').style.width = (done/MODULES.length*100)+'%';
-}
-
 function exportProgress(){
   const data = { progress: getProgress(), name: localStorage.getItem(NAME_KEY) || '', exportedAt: new Date().toISOString() };
   const blob = new Blob([JSON.stringify(data, null, 2)], {type:'application/json'});

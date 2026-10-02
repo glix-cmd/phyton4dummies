@@ -1,9 +1,10 @@
 /* Motor de ejecución: Python real en el navegador con Pyodide.
-   - Carga automática de librerías según los import (numpy, pandas, Bio, rdkit, sklearn...)
-   - Captura de gráficos de matplotlib/seaborn
-   - Archivos de datos del curso disponibles en el directorio de trabajo
+   - Carga automática de librerías según los import (numpy, pandas, Bio, sklearn...)
+   - Editor con resaltado (CodeMirror 5) y numeración de ejecuciones al estilo Jupyter
+   - Captura de gráficos de matplotlib/seaborn y archivos de datos del curso en el disco virtual
    - Todas las celdas comparten el mismo espacio de nombres (como en Colab/Jupyter) */
-let pyodide = null, pyodideReady = false, currentOut = null, busy = false;
+let pyodide = null, pyodideReady = false, currentOut = null, busy = false, execCount = 0;
+const EDITORS = {};
 
 const HELPERS_PY = `
 import sys, io, base64, builtins, json, warnings, asyncio
@@ -147,7 +148,6 @@ def _capturar_figuras():
     plt.close("all")
 `;
 
-function escapeHtml(s){ return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
 function appendText(text, isErr=false){
   if(!currentOut) return;
   const span = document.createElement('span');
@@ -155,22 +155,28 @@ function appendText(text, isErr=false){
   span.textContent = text;
   currentOut.appendChild(span);
 }
-window.__appendHTML = html => { if(currentOut){ const d=document.createElement('div'); d.innerHTML=html; currentOut.appendChild(d);} };
+window.__appendHTML = html => { if(currentOut){ const d = document.createElement('div'); d.innerHTML = html; currentOut.appendChild(d); } };
 
-function setStatus(msg, color){ const s=document.getElementById('pyStatus'); if(s){ s.textContent=msg; s.style.color=color||'var(--muted)'; } }
+/* Estado del intérprete en la barra de estado: loading | ready | busy | error */
+function setStatus(msg, estado){
+  const s = document.getElementById('pyStatus'), dot = document.getElementById('kernelDot');
+  if(s) s.textContent = msg;
+  if(dot) dot.className = 'dot ' + (estado || 'loading');
+}
 
 async function initPyodide(){
   try{
+    if(typeof loadPyodide === 'undefined') throw new Error('Pyodide no disponible');
     pyodide = await loadPyodide();
     pyodide.setStdout({batched: s => appendText(s + "\n")});
     pyodide.setStderr({batched: s => appendText(s + "\n", true)});
     for(const [nombre, contenido] of Object.entries(DATASETS)) pyodide.FS.writeFile(nombre, contenido);
     await pyodide.runPythonAsync(HELPERS_PY);
     pyodideReady = true;
-    setStatus('✓ Python listo', 'var(--ok)');
+    setStatus('Python listo', 'ready');
   }catch(e){
     console.error(e);
-    setStatus('⚠ No se pudo cargar Python (revisa tu conexión). Copia el código y pruébalo en Google Colab o VS Code.', 'var(--warn)');
+    setStatus('Python no se pudo cargar: revisa la conexión y recarga la página', 'error');
   }
 }
 
@@ -181,7 +187,7 @@ async function prepararLibrerias(code){
     await pyodide.loadPackage('micropip');
     await pyodide.runPythonAsync('import micropip\nawait micropip.install("seaborn")\n__seaborn_ok = True');
   }
-  if(/matplotlib|seaborn|\.plot\(|\.hist\(/.test(code)){
+  if(/matplotlib|seaborn|\.plot\(|\.hist\(|Phylo\.draw/.test(code)){
     await pyodide.loadPackage('matplotlib');
     pyodide.runPython('import matplotlib\nmatplotlib.use("agg")');
   }
@@ -189,7 +195,6 @@ async function prepararLibrerias(code){
 
 function limpiarError(msg){
   const lineas = msg.trim().split('\n');
-  // Quitar las líneas internas de Pyodide y quedarse con la parte útil del traceback
   const idx = lineas.findIndex(l => l.includes('File "<exec>"'));
   return (idx >= 0 ? lineas.slice(idx) : lineas.slice(-6)).join('\n');
 }
@@ -198,14 +203,14 @@ async function ejecutar(code, out){
   currentOut = out;
   out.innerHTML = '';
   out.classList.remove('empty');
-  const necesitaLibs = /^\s*(import|from)\s+(numpy|pandas|scipy|matplotlib|seaborn|Bio|rdkit|sklearn|PIL)/m.test(code);
-  if(necesitaLibs) appendText('⏳ Cargando librerías (la primera vez puede tardar unos segundos)…\n');
+  const necesitaLibs = /^\s*(import|from)\s+(numpy|pandas|scipy|matplotlib|seaborn|Bio|sklearn|PIL)/m.test(code);
+  if(necesitaLibs) appendText('Cargando librerías (la primera vez puede tardar unos segundos)…\n');
   try{
     await prepararLibrerias(code);
     if(necesitaLibs) out.innerHTML = '';
     await pyodide.runPythonAsync(code);
     await pyodide.runPythonAsync('_capturar_figuras()');
-    if(!out.hasChildNodes()) { appendText('(sin salida — usa print() para ver resultados)'); out.classList.add('empty'); }
+    if(!out.hasChildNodes()){ appendText('(sin salida: usa print() para ver resultados)'); out.classList.add('empty'); }
     return true;
   }catch(e){
     appendText(limpiarError(e.message), true);
@@ -213,48 +218,91 @@ async function ejecutar(code, out){
   }
 }
 
+/* ---------- Editores ---------- */
+function getCode(id){ return EDITORS[id] ? EDITORS[id].getValue() : document.getElementById('ta-'+id).value; }
+function setCode(id, v){ if(EDITORS[id]) EDITORS[id].setValue(v); else document.getElementById('ta-'+id).value = v; }
+
+function initEditors(root){
+  for(const k of Object.keys(EDITORS)) delete EDITORS[k];
+  const conCM = typeof window.CodeMirror === 'function';
+  root.querySelectorAll('textarea.code').forEach(ta => {
+    if(!conCM) return;
+    const id = ta.id.slice(3);
+    const ejecutarCelda = () => runCode(id);
+    EDITORS[id] = CodeMirror.fromTextArea(ta, {
+      mode: 'python', theme: 'genoma', lineNumbers: true, indentUnit: 4, tabSize: 4, indentWithTabs: false,
+      matchBrackets: true, viewportMargin: Infinity, lineWrapping: false,
+      extraKeys: {
+        'Ctrl-Enter': ejecutarCelda, 'Cmd-Enter': ejecutarCelda, 'Shift-Enter': ejecutarCelda,
+        'Tab': cm => cm.somethingSelected() ? cm.indentSelection('add') : cm.replaceSelection('    ', 'end'),
+        'Shift-Tab': cm => cm.indentSelection('subtract'),
+        'Esc': cm => cm.getInputField().blur(),
+      },
+    });
+  });
+  if(conCM && CodeMirror.runMode){
+    root.querySelectorAll('pre.hl').forEach(pre => {
+      const texto = pre.textContent; pre.textContent = '';
+      CodeMirror.runMode(texto, 'python', pre);
+      pre.classList.add('cm-s-genoma');
+    });
+  }
+}
+
+function etiquetaEjecucion(id){
+  execCount++;
+  const lab = document.getElementById('in-'+id);
+  if(lab){ lab.textContent = `In [${execCount}]`; lab.classList.add('ran'); }
+  const sb = document.getElementById('sbExec');
+  if(sb) sb.textContent = `${execCount} ${execCount === 1 ? 'celda ejecutada' : 'celdas ejecutadas'}`;
+}
+
 async function runCode(id){
-  const ta = document.getElementById('ta-'+id), out = document.getElementById('out-'+id), btn = document.getElementById('run-'+id);
-  if(!pyodideReady){ out.textContent = 'Python todavía se está cargando, espera unos segundos…'; return; }
+  const out = document.getElementById('out-'+id), btn = document.getElementById('run-'+id);
+  const celda = out.closest('.cell');
+  if(!pyodideReady){ out.classList.remove('empty'); out.textContent = 'Python todavía se está cargando: espera a que la barra de estado diga "Python listo".'; return; }
   if(busy) return;
-  busy = true; btn.disabled = true; btn.textContent = 'Ejecutando…';
-  await ejecutar(ta.value, out);
-  busy = false; btn.disabled = false; btn.textContent = '▶ Ejecutar';
+  busy = true; celda.classList.add('running'); setStatus('Ejecutando…', 'busy');
+  if(btn) btn.disabled = true;
+  etiquetaEjecucion(id);
+  await ejecutar(getCode(id), out);
+  busy = false; celda.classList.remove('running'); setStatus('Python listo', 'ready');
+  if(btn) btn.disabled = false;
 }
 
 /* Comprobación automática de ejercicios: ejecuta el código del alumno y después unas aserciones */
 async function checkExercise(id){
-  const ta = document.getElementById('ta-'+id), out = document.getElementById('out-'+id), res = document.getElementById('chk-'+id);
-  if(!pyodideReady || busy){ res.textContent = 'Espera a que Python esté listo…'; return; }
-  busy = true;
-  const ok = await ejecutar(ta.value, out);
-  if(!ok){ res.className='check-res bad'; res.textContent = '❌ Tu código da un error: revísalo en la salida.'; busy=false; return; }
-  try{
-    currentOut = null;
-    await pyodide.runPythonAsync(CODE_TESTS[id]);
-    res.className='check-res good'; res.textContent = '✅ ¡Correcto! El ejercicio supera todas las comprobaciones.';
-  }catch(e){
-    const m = e.message.trim().split('\n').pop().replace(/^AssertionError:?\s*/,'');
-    res.className='check-res bad'; res.textContent = '❌ Aún no: ' + (m || 'el resultado no es el esperado.');
+  const out = document.getElementById('out-'+id), res = document.getElementById('chk-'+id);
+  if(!pyodideReady || busy){ res.className = 'check-res bad'; res.textContent = 'Espera a que Python esté listo.'; return; }
+  busy = true; setStatus('Comprobando…', 'busy');
+  etiquetaEjecucion(id);
+  const ok = await ejecutar(getCode(id), out);
+  if(!ok){
+    res.className = 'check-res bad'; res.textContent = 'Tu código da un error: revísalo en la salida.';
+  }else{
+    try{
+      currentOut = null;
+      await pyodide.runPythonAsync(CODE_TESTS[id]);
+      res.className = 'check-res good'; res.textContent = 'Superado: el ejercicio pasa todas las comprobaciones.';
+      if(typeof marcarEjercicio === 'function') marcarEjercicio(out.closest('.exercise'));
+    }catch(e){
+      const m = e.message.trim().split('\n').pop().replace(/^AssertionError:?\s*/, '');
+      res.className = 'check-res bad'; res.textContent = 'Aún no: ' + (m || 'el resultado no es el esperado.');
+    }
   }
-  busy = false;
+  busy = false; setStatus('Python listo', 'ready');
 }
 
 function resetCode(id){
-  document.getElementById('ta-'+id).value = CODE_ORIG[id];
+  setCode(id, CODE_ORIG[id]);
   document.getElementById('out-'+id).innerHTML = '';
-  const r = document.getElementById('chk-'+id); if(r) r.textContent = '';
+  const r = document.getElementById('chk-'+id); if(r){ r.textContent = ''; r.className = 'check-res'; }
 }
 
-/* Editor: Tab inserta 4 espacios, Ctrl/Cmd+Enter ejecuta la celda */
+/* Sin CodeMirror (sin conexión al CDN): Tab inserta 4 espacios y Ctrl/Cmd+Enter ejecuta en el textarea */
 document.addEventListener('keydown', e => {
   const t = e.target;
   if(!t.classList || !t.classList.contains('code')) return;
-  if(e.key === 'Tab'){
-    e.preventDefault();
-    const s = t.selectionStart; t.setRangeText('    ', s, t.selectionEnd, 'end');
-  }
-  if(e.key === 'Enter' && (e.ctrlKey || e.metaKey)){
-    e.preventDefault(); runCode(t.id.slice(3));
-  }
+  if(e.key === 'Tab'){ e.preventDefault(); const s = t.selectionStart; t.setRangeText('    ', s, t.selectionEnd, 'end'); }
+  if(e.key === 'Enter' && (e.ctrlKey || e.metaKey)){ e.preventDefault(); runCode(t.id.slice(3)); }
 });

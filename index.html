@@ -1,41 +1,103 @@
 <!DOCTYPE html>
-<html lang="es">
+<html lang="es" data-theme="dark">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Aprende Python desde cero — v2.4</title>
-<meta name="description" content="Curso interactivo de Python desde cero hasta bioinformática, con código ejecutable en el navegador.">
+<title>Aprende Python · de la primera línea al primer genoma</title>
+<meta name="description" content="Curso interactivo de Python desde cero hasta bioinformática, con código que se ejecuta en el navegador.">
+<link rel="icon" type="image/svg+xml" href="icon.svg">
+<link rel="icon" type="image/png" sizes="512x512" href="icon-512.png">
+<link rel="apple-touch-icon" href="icon-180.png">
+<meta name="theme-color" content="#0A1220">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Condensed:wght@500;600&family=IBM+Plex+Sans:ital,wght@0,400;0,500;0,600;1,400&family=JetBrains+Mono:wght@400;500;600&display=swap">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/codemirror.min.css">
 <link rel="stylesheet" href="css/styles.css">
 </head>
 <body>
 <div id="app">
-  <aside id="sidebar">
-    <div class="brand">
-      <h1>🐍 Aprende Python</h1>
-      <button id="themeBtn" onclick="toggleTheme()" title="Cambiar tema">🌙</button>
+
+  <header id="topbar">
+    <button id="drawerBtn" class="icon-btn" aria-label="Abrir el explorador de módulos" aria-controls="explorer" aria-expanded="false">
+      <svg viewBox="0 0 20 20" aria-hidden="true"><path d="M3 5h14M3 10h14M3 15h14"/></svg>
+    </button>
+    <a class="brand" href="#" onclick="goTo(0); return false;" aria-label="Ir a la portada">
+      <svg viewBox="0 0 32 32" aria-hidden="true" class="brand-mark"><rect width="32" height="32" rx="8" fill="#0E1726" stroke="none"/><rect x=".5" y=".5" width="31" height="31" rx="7.5" fill="none" stroke="#30476B" stroke-width="1"/><path d="M8.5 9.5 15 16l-6.5 6.5" fill="none" stroke="#DDE6F4" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round"/><rect x="16.8" y="20.6" width="2.2" height="2.4" rx=".6" fill="#3CCB8F" stroke="none"/><rect x="19.4" y="20.6" width="2.2" height="2.4" rx=".6" fill="#5AA2FF" stroke="none"/><rect x="22" y="20.6" width="2.2" height="2.4" rx=".6" fill="#F4B740" stroke="none"/><rect x="24.6" y="20.6" width="2.2" height="2.4" rx=".6" fill="#FF6178" stroke="none"/></svg>
+      <span>aprende-python</span>
+    </a>
+    <nav id="crumbs" aria-label="Ruta del módulo"></nav>
+    <div class="top-actions">
+      <button id="paletteBtn" class="search-btn" onclick="openPalette()">
+        <svg viewBox="0 0 20 20" aria-hidden="true"><circle cx="9" cy="9" r="5.5"/><path d="m13.5 13.5 3.5 3.5"/></svg>
+        <span>Buscar módulo</span><kbd>Ctrl K</kbd>
+      </button>
+      <button id="themeBtn" class="icon-btn" onclick="toggleTheme()" aria-label="Cambiar entre tema oscuro y claro">
+        <svg viewBox="0 0 20 20" aria-hidden="true"><circle cx="10" cy="10" r="6.5"/><path d="M10 3.5a6.5 6.5 0 0 0 0 13z" class="fill"/></svg>
+      </button>
     </div>
-    <p class="sub">v2.4 · De cero a bioinformática</p>
-    <input id="searchBox" placeholder="🔍 Buscar módulo…">
-    <div id="progressWrap">
-      <span id="progressText">0 módulos</span>
-      <div id="progressBar"><div id="progressFill"></div></div>
+    <div id="readProgress" aria-hidden="true"></div>
+  </header>
+
+  <aside id="explorer" aria-label="Explorador de módulos">
+    <div class="ex-top">
+      <div class="ex-title">
+        <span>Explorador</span>
+        <span id="progressText" class="ex-count"></span>
+      </div>
+      <div id="progressBar" role="progressbar" aria-label="Progreso del curso"><div id="progressFill"></div></div>
+      <label class="filter">
+        <svg viewBox="0 0 20 20" aria-hidden="true"><path d="M3 5h14l-5 6v5l-4-2v-3z"/></svg>
+        <input id="searchBox" placeholder="Filtrar módulos" autocomplete="off" aria-label="Filtrar módulos por nombre">
+      </label>
     </div>
-    <p id="pyStatus">Cargando Python en el navegador…</p>
-    <nav><ul id="navList"></ul></nav>
-    <div class="sidefoot">
-      <button id="exportBtn">⬇ Exportar</button>
-      <button onclick="document.getElementById('importInput').click()">⬆ Importar</button>
-      <input type="file" id="importInput" accept="application/json" style="display:none">
+    <nav id="navList"></nav>
+    <div class="ex-foot">
+      <button id="exportBtn" class="ghost-btn" title="Descargar tu progreso como archivo .json">Exportar progreso</button>
+      <button class="ghost-btn" onclick="document.getElementById('importInput').click()" title="Cargar un archivo de progreso">Importar</button>
+      <input type="file" id="importInput" accept="application/json" hidden>
     </div>
   </aside>
-  <main id="main"></main>
+  <div id="scrim" onclick="closeDrawer()"></div>
+
+  <main id="pane" tabindex="-1">
+    <div id="tabs" role="tablist"></div>
+    <div id="main"></div>
+  </main>
+
+  <footer id="statusbar" aria-live="polite">
+    <span class="sb-item"><span id="kernelDot" class="dot loading"></span><span id="pyStatus">Cargando Python…</span></span>
+    <span class="sb-item sb-hide-sm">Pyodide 0.26 (Python 3.12)</span>
+    <span class="sb-item" id="sbProgress"></span>
+    <span class="sb-item sb-hide-sm" id="sbExec">0 celdas ejecutadas</span>
+    <span class="sb-spacer"></span>
+    <span class="sb-item sb-hide-sm"><kbd>Ctrl Enter</kbd> ejecutar</span>
+    <span class="sb-item sb-hide-sm"><kbd>Ctrl K</kbd> buscar</span>
+    <span class="sb-item sb-hide-sm"><kbd>Alt ←</kbd><kbd>Alt →</kbd> módulos</span>
+  </footer>
+</div>
+
+<div id="palette" role="dialog" aria-modal="true" aria-label="Buscar módulo" hidden>
+  <div class="pal-box">
+    <div class="pal-input">
+      <svg viewBox="0 0 20 20" aria-hidden="true"><circle cx="9" cy="9" r="5.5"/><path d="m13.5 13.5 3.5 3.5"/></svg>
+      <input id="palInput" placeholder="Escribe para buscar: pandas, regex, PDB…" autocomplete="off">
+      <kbd>Esc</kbd>
+    </div>
+    <ul id="palList" role="listbox"></ul>
+  </div>
 </div>
 
 <script src="https://cdn.jsdelivr.net/pyodide/v0.26.1/full/pyodide.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/codemirror.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/mode/python/python.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/addon/edit/matchbrackets.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/addon/runmode/runmode.min.js"></script>
 <script src="js/data/datasets.js"></script>
 <script src="js/data/modules.js"></script>
 <script src="js/data/modules-ciencia.js"></script>
 <script src="js/data/modules-bio.js"></script>
+<script src="js/data/modules-ml.js"></script>
 <script src="js/pyRunner.js"></script>
 <script src="js/progress.js"></script>
 <script src="js/app.js"></script>

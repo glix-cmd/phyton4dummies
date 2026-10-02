@@ -2,6 +2,14 @@
 let codeCounter = 0;
 const CODE_ORIG = {}, CODE_TESTS = {}, CODE_SOL = {};
 function _esc(s){ return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+const ICON = {
+  play:'<svg viewBox="0 0 16 16" aria-hidden="true"><path d="M4.5 3.2v9.6c0 .5.5.8 1 .5l7.6-4.8c.4-.3.4-.8 0-1.1L5.5 2.7c-.5-.3-1 0-1 .5z"/></svg>',
+  reset:'<svg viewBox="0 0 16 16" aria-hidden="true"><path d="M2.5 8a5.5 5.5 0 1 0 1.7-4"/><path d="M2.5 2.5v3h3"/></svg>',
+  check:'<svg viewBox="0 0 16 16" aria-hidden="true"><path d="m3 8.5 3 3 7-7"/></svg>',
+  file:'<svg viewBox="0 0 16 16" aria-hidden="true"><path d="M4 1.5h5.5L13 5v9.5H4z"/><path d="M9.5 1.5V5H13"/></svg>',
+  list:'<svg viewBox="0 0 16 16" aria-hidden="true"><path d="M5.5 4h8M5.5 8h8M5.5 12h8M2.5 4h0M2.5 8h0M2.5 12h0"/></svg>',
+};
+function _cap(html){ return html.replace(/^([a-záéíóúñ])/, c => c.toUpperCase()); }
 
 /* Celda de código editable y ejecutable. opts.test = aserciones Python para autocorrección */
 function codeBlock(code, runnable=true, opts={}){
@@ -9,77 +17,87 @@ function codeBlock(code, runnable=true, opts={}){
   CODE_ORIG[id] = code;
   if(opts.test) CODE_TESTS[id] = opts.test;
   const rows = Math.min(Math.max(code.split('\n').length + 1, 4), 28);
-  return `<div class="editor-wrap">
-    <div class="editor-head"><span>${opts.label || 'Python'} <span class="kbd">Ctrl+Enter</span></span>
-      <span>
-        <button class="reset" onclick="resetCode('${id}')">↺ reiniciar</button>
-        ${opts.test ? `<button class="check" onclick="checkExercise('${id}')">✔ Comprobar</button>` : ''}
-        ${runnable ? `<button id="run-${id}" onclick="runCode('${id}')">▶ Ejecutar</button>` : ''}
+  return `<div class="cell" data-cell="${id}">
+    <div class="cell-head">
+      <span class="in-label" id="in-${id}">In [ ]</span>
+      ${opts.label ? `<span class="cell-title">${opts.label}</span>` : ''}
+      <span class="cell-actions">
+        <button class="btn" onclick="resetCode('${id}')" title="Volver al código original">${ICON.reset}Restaurar</button>
+        ${opts.test ? `<button class="btn btn-check" onclick="checkExercise('${id}')">${ICON.check}Comprobar</button>` : ''}
+        ${runnable ? `<button class="btn btn-run" id="run-${id}" onclick="runCode('${id}')" title="Ejecutar (Ctrl+Enter)">${ICON.play}Ejecutar</button>` : ''}
       </span>
     </div>
-    <textarea class="code" id="ta-${id}" rows="${rows}" spellcheck="false">${_esc(code)}</textarea>
+    <textarea class="code" id="ta-${id}" rows="${rows}" spellcheck="false" aria-label="Código Python">${_esc(code)}</textarea>
     <div class="output" id="out-${id}"></div>
-    ${opts.test ? `<div class="check-res" id="chk-${id}"></div>` : ''}
+    ${opts.test ? `<div class="check-res" id="chk-${id}" role="status"></div>` : ''}
   </div>`;
 }
 /* Código de solo lectura (para código que solo funciona en tu ordenador).
    NB_REC se activa solo al generar los cuadernos de Colab (build): registra cada celda en orden. */
 let NB_REC = null;
 function _staticHTML(code, label){
-  return `<div class="static-code"><div class="static-head">${label}</div><pre>${_esc(code)}</pre></div>`;
+  const limpio = label.replace(/^[^\p{L}\p{N}(]+/u, '');
+  const tipo = /RDKit|Colab/.test(limpio) ? 'Colab' : 'local';
+  return `<div class="static-code"><div class="static-head"><span class="sc-badge">${tipo}</span>${limpio}</div><pre class="hl">${_esc(code)}</pre></div>`;
 }
 function _rec(item, html){
   if(!NB_REC) return html;
   const i = NB_REC.push(item) - 1;
   return `<!--NB${item.k === 'ex' ? 'X' : 'C'}:${i}-->${html}<!--/NB${item.k === 'ex' ? 'X' : 'C'}-->`;
 }
-function staticCode(code, label='💻 Para ejecutar en tu ordenador (VS Code / Colab)'){
-  return _rec({k:'code', c:code}, _staticHTML(code, label.startsWith('💻') || label.startsWith('🧪') ? label : '💻 ' + label));
+function staticCode(code, label='Para ejecutar en tu ordenador (VS Code / Colab)'){
+  return _rec({k:'code', c:code}, _staticHTML(code, label));
 }
 /* Celda RDKit: RDKit no existe para Python en el navegador, se ejecuta en Colab / en tu ordenador */
 function rdkitBlock(code){
-  return _rec({k:'code', c:code}, _staticHTML(code, '🧪 RDKit — ejecútalo en Google Colab o en tu ordenador (cuaderno incluido en notebooks/)'));
+  return _rec({k:'code', c:code}, _staticHTML(code, 'RDKit: ejecútalo en Google Colab o en tu ordenador (cuaderno en notebooks/)'));
 }
 function exerciseLocal(title, prompt, starter, solution, test=null, solCode=null){
-  const html = `<div class="exercise"><h4>✏️ Ejercicio: ${title}</h4>
+  const html = `<section class="exercise" data-ex="${_esc(title)}">
+    <header class="ex-head"><span class="ex-k">ejercicio</span><h4>${title}</h4><span class="ex-pill local">En Colab</span></header>
     <p>${prompt}</p>
-    ${_staticHTML(starter, '🧪 Escribe tu solución en el cuaderno de Colab (la celda de comprobación está justo debajo)')}
-    <details><summary>Ver solución explicada</summary>${solution}${solCode ? `<pre class="sol">${_esc(solCode)}</pre>` : ''}</details>
-  </div>`;
+    ${_staticHTML(starter, 'Escribe tu solución en el cuaderno de Colab (la celda de comprobación está justo debajo)')}
+    <details class="sol-d"><summary>Ver la solución explicada</summary><div class="sol-body">${solution}${solCode ? `<pre class="sol hl">${_esc(solCode)}</pre>` : ''}</div></details>
+  </section>`;
   return _rec({k:'ex', t:title, p:prompt, s:starter, sol:solution, test, solc:solCode}, html);
 }
 function noNavegador(nb){
-  return `<div class="callout warn">🧪 <b>RDKit no se puede ejecutar en el navegador</b>: no existe una versión de RDKit para Python compilada para la web (ni siquiera en Pyodide). En este módulo el código se muestra para ejecutarlo en <b>Google Colab</b> o en tu ordenador. Abre <code>notebooks/${nb}</code> (viene en la carpeta del curso) en <a href="https://colab.research.google.com" target="_blank" rel="noopener">colab.research.google.com</a> con <i>Archivo → Subir cuaderno</i>: incluye la instalación, los archivos de datos y la comprobación de cada ejercicio.</div>`;
+  return `<aside class="callout c-note"><span class="callout-k">RDKit se ejecuta fuera del navegador</span>No existe una versión de RDKit para Python compilada para la web (ni siquiera en Pyodide), así que en este módulo el código se muestra para ejecutarlo en <b>Google Colab</b> o en tu ordenador. Abre <code>notebooks/${nb}</code> (viene en la carpeta del curso) en <a href="https://colab.research.google.com" target="_blank" rel="noopener">colab.research.google.com</a> con <i>Archivo → Subir cuaderno</i>: incluye la instalación, los archivos de datos y la comprobación de cada ejercicio.</aside>`;
 }
-function tip(html){ return `<div class="callout tip">💡 ${html}</div>`; }
-function warn(html){ return `<div class="callout warn">⚠️ Error habitual: ${html}</div>`; }
-function note(html){ return `<div class="callout">${html}</div>`; }
-function concepto(titulo, html){ return `<div class="callout concept">🔑 <b>${titulo}:</b> ${html}</div>`; }
-function resumen(items){ return `<div class="summary"><h4>📌 Resumen del módulo</h4><ul>${items.map(i=>`<li>${i}</li>`).join('')}</ul></div>`; }
-function origen(txt){ return `<div class="origin">📁 Basado en: ${txt}</div>`; }
+function _callout(cls, k, html){ return `<aside class="callout ${cls}"><span class="callout-k">${k}</span>${html}</aside>`; }
+function tip(html){ return _callout('c-tip', 'Consejo', _cap(html)); }
+function warn(html){ return _callout('c-warn', 'Error habitual', _cap(html)); }
+function note(html){ return _callout('c-note', 'Nota', _cap(html)); }
+function concepto(titulo, html){ return _callout('c-concept', _cap(titulo), _cap(html)); }
+function resumen(items){ return `<section class="summary"><h4>${ICON.list}Resumen del módulo</h4><ul>${items.map(i=>`<li>${i}</li>`).join('')}</ul></section>`; }
+function origen(txt){
+  const partes = txt.split(/,\s*|\s+y\s+/).map(p => p.trim()).filter(Boolean);
+  return `<div class="origin">${ICON.file}Basado en ${partes.map(p => `<span>${p}</span>`).join(' ')}</div>`;
+}
 
 /* Ejercicio: enunciado + celda + (opcional) autocorrección + solución explicada con código */
 function exercise(title, prompt, starter, solution, test=null, solCode=null){
   if(solCode) CODE_SOL['c'+codeCounter] = solCode;
-  return `<div class="exercise"><h4>✏️ Ejercicio: ${title}</h4>
+  return `<section class="exercise" data-ex="${_esc(title)}">
+    <header class="ex-head"><span class="ex-k">ejercicio</span><h4>${title}</h4><span class="ex-pill">${test ? 'Pendiente' : 'Libre'}</span></header>
     <p>${prompt}</p>
-    ${codeBlock(starter, true, {test})}
-    <details><summary>Ver solución explicada</summary>${solution}${solCode ? `<pre class="sol">${_esc(solCode)}</pre>` : ''}</details>
-  </div>`;
+    ${codeBlock(starter, true, {test, label: 'tu solución'})}
+    <details class="sol-d"><summary>Ver la solución explicada</summary><div class="sol-body">${solution}${solCode ? `<pre class="sol hl">${_esc(solCode)}</pre>` : ''}</div></details>
+  </section>`;
 }
 
 /* Pregunta tipo test con corrección inmediata */
 let quizCounter = 0;
 function quiz(pregunta, opciones, correcta, explicacion){
   const q = 'q'+(quizCounter++);
-  return `<div class="quiz" id="${q}"><div class="quiz-q">❓ ${pregunta}</div>
-    ${opciones.map((o,i)=>`<button class="quiz-opt" onclick="answerQuiz('${q}',${i},${correcta})">${o}</button>`).join('')}
-    <div class="quiz-exp" data-exp="${_esc(explicacion)}"></div></div>`;
+  return `<div class="quiz" id="${q}"><div class="quiz-q"><span class="quiz-k">?</span><span>${pregunta}</span></div>
+    <ol class="quiz-opts">${opciones.map((o,i)=>`<li><button class="quiz-opt" onclick="answerQuiz('${q}',${i},${correcta})"><kbd>${'abcd'[i]}</kbd><span>${o}</span></button></li>`).join('')}</ol>
+    <div class="quiz-exp" data-exp="${_esc(explicacion)}" aria-live="polite"></div></div>`;
 }
 function answerQuiz(q, i, ok){
   const box = document.getElementById(q), btns = box.querySelectorAll('.quiz-opt'), exp = box.querySelector('.quiz-exp');
   btns.forEach((b,j)=>{ b.disabled = true; if(j===ok) b.classList.add('right'); else if(j===i) b.classList.add('wrong'); });
-  exp.innerHTML = (i===ok ? '✅ ¡Correcto! ' : '❌ No exactamente. ') + exp.dataset.exp;
+  exp.innerHTML = (i===ok ? '<b class="ok">Correcto.</b> ' : '<b class="ko">No exactamente.</b> ') + exp.dataset.exp;
 }
 
 const MODULES = [

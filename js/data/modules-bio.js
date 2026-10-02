@@ -13,6 +13,22 @@ print("¿Contiene 'PAP'?", "PAP" in p53, "| veces:", p53.count("PAP"))
 print("Dividida por 'P':", p53.split("P")[:5])
 print("Unida:", Seq("KLLPENNV") + Seq("APTPAAPAPAP"))
 print("Invertida:", p53[::-1][:20])`)}
+<h3>Contar patrones (y una trampa: Seq no valida)</h3>
+${codeBlock(`from Bio.Seq import Seq
+
+secuencia_adn = Seq("ACGGATACGGATAGCTAGTCCGG")
+print("Ocurrencias de 'GG':", secuencia_adn.count("GG"))
+print("En 'AGGGA', count da", Seq("AGGGA").count("GG"), "y count_overlap da", Seq("AGGGA").count_overlap("GG"))
+
+ejemplo = Seq("AHDSHFBJDS")              # Seq acepta CUALQUIER texto, aunque no sea biológico
+print(ejemplo[0:3], "| 'DS' aparece", ejemplo.count("DS"), "veces")
+
+def es_adn(seq):
+    return set(str(seq).upper()) <= set("ACGTN")
+
+print("¿ACGG... es ADN?", es_adn(secuencia_adn), "| ¿AHDSHFBJDS es ADN?", es_adn(ejemplo))`)}
+${concepto("count frente a count_overlap", "<code>count</code> no solapa coincidencias (como <code>str.count</code>): en AGGGA encuentra un GG y salta. <code>count_overlap</code> cuenta también las solapadas. Para motivos repetitivos (microsatélites, homopolímeros) suele interesar la segunda.")}
+${warn("dar por hecho que Biopython comprueba la secuencia. <code>Seq('AHDSHFBJDS')</code> es válido aunque contenga letras que no son nucleótidos, y <code>translate()</code> o <code>gc_fraction</code> darán resultados sin sentido o errores más adelante. Valida tú los datos de entrada.")}
 <h3>El dogma central en tres líneas</h3>
 ${codeBlock(`from Bio.Seq import Seq
 
@@ -28,6 +44,16 @@ print("Complementaria:          ", adn.complement())
 print("Reversa complementaria:  ", adn.reverse_complement())`)}
 ${concepto("complement vs reverse_complement", "la hebra opuesta del ADN se lee en sentido contrario (5'→3'). Por eso, para buscar genes o diseñar cebadores en la otra hebra casi siempre necesitas <code>reverse_complement()</code>, no solo <code>complement()</code>.")}
 ${warn("traducir una secuencia cuya longitud no es múltiplo de 3. Biopython avisa con <i>Partial codon</i>. Recórtala antes: <code>adn[:len(adn) - len(adn) % 3]</code>.")}
+${codeBlock(`from Bio.Seq import Seq
+
+proteina = Seq("MEEPQSDPSVEPPLSQETFSDLWKLLPENNVLSPLPSQAMDDLMLSPDDIEQWFTEDPGP")
+gc_proteina = (proteina.count("G") + proteina.count("C")) / len(proteina) * 100
+print(f"'GC' de la proteína p53: {gc_proteina:.1f} %  <- cuenta glicinas (G) y cisteínas (C): no significa nada")
+
+adn = Seq("ATGCGCTAATCGCGAAAGCTTAGCGATCGGATCGTAGCTAGCTAGCTACGT")
+gc_adn = (adn.count("G") + adn.count("C")) / len(adn) * 100
+print(f"GC del ADN: {gc_adn:.1f} %")`)}
+${warn("en el script de clase el porcentaje GC se calcula sobre la secuencia de la <b>proteína</b> p53. El código no falla, pero el resultado no tiene sentido biológico: en una proteína, G es glicina y C es cisteína. El contenido GC es una propiedad de los ácidos nucleicos (ADN o ARN).")}
 <h3>Bio.SeqUtils: propiedades fisicoquímicas</h3>
 ${codeBlock(`from Bio.Seq import Seq
 from Bio.SeqUtils import seq3, seq1, molecular_weight, gc_fraction
@@ -73,10 +99,57 @@ def encontrar_orfs(secuencia, min_len=30):
                     break
     return orfs
 
-adn = ("AATATTCGTGTTTTTTTCAAACTGTGAGAGAAAAAGAAAGAGAGAAAGAGATGGGAGAGATTGGGTTTACAGAGAAGCAAGAAG"
-       "CTTTGGTGAAGGAATCGTGGGAGATACTGAAACAAGACATCCCCAAATACAGCCTTCACTTCTTCTCACAGTAACCATAT")
+secuencia = (
+    "AA TAT TCG TGT TTT TTT CAA ACT GTG AGA GAA AAA GAA AGA GAG AAA GAG ATG GGA GAG ATT GGG TTT A"
+    "CA GAG AAG CAA GAA GCT TTG GTG AAG GAA TCG TGG GAG ATA CTG AAA CAA GAC ATC CCC AAA TAC AGC C"
+    "TT CAC TTC TTC TCA CAG TAA CCA TAT ATA CTT AGT TAT ATA TAA GCT CTT TAC ATG TTG TTT ATA TAT G"
+    "CG AGC TAA TGA ACA ATA TAA TTG TGA TAG GAT ACT GGA GAT AGC ACC AGC AGC AAA AGG CTT GTT CTC T"
+    "TT CCT AAG AGA CTC AGA TGA AGT CCC TCA CAA CAA TCC TAA ACT CAA AGC TCA TGC TGT TAA AGT CTT C"
+    "AA GAT GGT AAT TAC TTA CTT TCC GAT TTT CCA CAT CTA CAT ATA TGT GAA TCA CTT GCA TAT ACT GTA T"
+    "CA TTA TCT TAC CAT TCC TTA AAA TTG AAA GTA GAA TGT TTC ATT ATT TAC AGC TAA GAA TCT TTA TTT A"
+    "CT CAT TAT ATA CCA TTT ATA TAT AAT AGA AAA TAG TAG TCT GAA TTA ACT TTT CTT GTC ATT TAT TGA C"
+    "GC AGC CAT GTG CAC ACA AGT TGC GAT TTT GTT TGA ACT TGG CTA GTT GGC TTT GTC TTC TTC TTT GAG A"
+    "AT AAA AAT CTC ATA CTA GTA AAG AAT ACT CTG TGA TAT TTT ATT TTT AAG AAC AAA CAT AGA TTT CTC T"
+    "GT CAA TAA AGA ATT GTT ACT GAA GAA TCC AAG TGG TTC GGG TCG CTT TAT GGA TTT TTA CTT TTT TGC T"
+    "AA TCT TAT TAT AAT AGA ACC ATA TAA ACC AAA TTC CGT TTA CTT TTT AAA TTT GGG TTT ATG ACT TGG T"
+    "TT GGT TCA ACT CAC TTT TGG CTT CTA AGA CTT TGC ATA ACA TGT TTT AGA CAG ACA AAA AAG AAA AAG A"
+    "CTT GCA TAA CAT GTA TGA ATT TTT ATT TTA TTT TGT TTG TGT GTA GAC ATG TGA AAC AGC TAT ACA GCT "
+    "GAG GGA GGA AGG AAA GGT GGT AGT GGC TGA CAC AAC CCT CCA ATA TTT AGG CTC AAT TCA TCT CAA AAG "
+    "CGG CGT TAT TGA CCC TCA CTT CGA GGT CTG TTA TGT TAA AAA AAA ATA TAT ATA CAC ATT AAT TTT GGC "
+    "TGA TTT TGA TTT TCG ATT TGA ACG CAT TTT AAT AAG GTG TGA ATG TGA AAG CAG GTG GTG AAA GAA GCT "
+    "TTG CTA AGG ACA TTG AAA GAG GGG TTG GGG GAG AAA TAC AAT GAA GAA GTG GAA GGT GCT TGG TCT CAA "
+    "GCT TAT GAT CAC TTG GCT TTA GCC ATC AAG ACC GAG ATG AAA CAA GAA GAG TCA TAA AAC CCT ATT GAT "
+    "CAT TGG GTA TCG CAT ACA TGA ATC TAT TCC ACA T"
+)
+adn = secuencia.replace(" ", "")          # quitamos los espacios entre codones
+print("Longitud:", len(adn), "pb")
 for inicio, fin, prot in encontrar_orfs(adn):
     print(f"ORF {inicio}-{fin} ({fin - inicio} pb): {prot}")`)}
+${warn("en el script original la línea <code>orfs = []      '''lista vacía'''</code> pone un texto entre comillas triples detrás de una instrucción: Python lo interpreta como código y da <code>SyntaxError</code>. Los comentarios van con <code>#</code>; las comillas triples solo sirven como docstring al principio de una función. Además, la secuencia original tiene un grupo de 4 letras (<code>ACTT</code>) entre los tripletes: al quitar los espacios, todo lo que viene detrás cambia de marco de lectura, un recordatorio de que los espacios 'de lectura' no son codones reales.")}
+${exercise("ORFs en las dos hebras", "El buscador anterior solo mira la hebra directa. Escribe <code>orfs_dos_hebras(seq, min_len=30)</code> que devuelva una lista de tuplas <code>(hebra, inicio, fin, proteina)</code> con los ORFs de la hebra directa (<code>'+'</code>) y de su <b>reversa complementaria</b> (<code>'-'</code>). Reutiliza <code>encontrar_orfs</code> (ejecuta antes su celda); las coordenadas de la hebra '-' se refieren a la reversa complementaria.",
+`from Bio.Seq import Seq
+
+def orfs_dos_hebras(seq, min_len=30):
+    resultado = []
+    return resultado
+
+print(len(orfs_dos_hebras(adn)), "ORFs en total")
+`,
+`<p>Recorre los ORFs de <code>encontrar_orfs(seq, min_len)</code> añadiendo <code>'+'</code> delante, y después los de <code>encontrar_orfs(str(Seq(seq).reverse_complement()), min_len)</code> con <code>'-'</code>. Una tupla se amplía con <code>('+',) + orf</code>. En genomas reales, la mitad de los genes están en la hebra opuesta: buscar solo en una es perder la mitad.</p>`,
+`from Bio.Seq import Seq
+esperado = [("+",) + o for o in encontrar_orfs(adn)] + [("-",) + o for o in encontrar_orfs(str(Seq(adn).reverse_complement()))]
+r = orfs_dos_hebras(adn)
+assert len(r) == len(esperado), f"Esperaba {len(esperado)} ORFs y tienes {len(r)}"
+assert {(h, i, f) for h, i, f, _ in r} == {(h, i, f) for h, i, f, _ in esperado}, "Hebras o coordenadas incorrectas"
+assert any(h == "-" for h, *_ in r), "No hay ningún ORF de la hebra '-'"`,
+`def orfs_dos_hebras(seq, min_len=30):
+    resultado = [("+",) + orf for orf in encontrar_orfs(seq, min_len)]
+    reversa = str(Seq(seq).reverse_complement())
+    resultado += [("-",) + orf for orf in encontrar_orfs(reversa, min_len)]
+    return resultado
+
+for hebra, inicio, fin, prot in orfs_dos_hebras(adn):
+    print(hebra, inicio, fin, prot)`)}
 ${exercise("Ficha de un cebador", "Para el cebador dado, guarda en <code>gc</code> su porcentaje de GC (0-100), en <code>tm</code> la Tm por el método de Wallace y en <code>rc</code> su reversa complementaria como texto (str).",
 `from Bio.Seq import Seq
 from Bio.SeqUtils import gc_fraction
@@ -112,6 +185,25 @@ for rec in SeqIO.parse("citocromo_c.fasta", "fasta"):   # parse: VARIAS secuenci
 
 secuencias = {rec.id: rec.seq for rec in SeqIO.parse("citocromo_c.fasta", "fasta")}
 print(secuencias.keys())`)}
+<h3>Descargar un FASTA de UniProt y leerlo</h3>
+${codeBlock(`from Bio import SeqIO
+
+async def descargar_fasta(uniprot_id, ruta):
+    """Descarga el FASTA de UniProt y lo guarda en ruta (versión web de download_fasta_file)."""
+    r = await web.get(f"https://rest.uniprot.org/uniprotkb/{uniprot_id}.fasta")
+    if r.status_code != 200:
+        raise ValueError(f"Error al descargar el archivo FASTA: {uniprot_id} (HTTP {r.status_code})")
+    with open(ruta, "w") as f:
+        f.write(r.text)
+    print(f"Archivo FASTA descargado y guardado en '{ruta}'.")
+
+await descargar_fasta("P04637", "p53_sequence.fasta")          # requiere conexión
+for record in SeqIO.parse("p53_sequence.fasta", "fasta"):
+    print("ID de la secuencia:", record.id)
+    print("Descripción:", record.description)
+    print("Secuencia (primeros 60 aa):", record.seq[:60])
+    print("Tamaño de la secuencia:", len(record.seq), "aminoácidos")`)}
+${tip("Los scripts de clase descargan de <code>https://www.uniprot.org/uniprot/{id}.fasta</code>, la dirección antigua. Hoy se usa <code>https://rest.uniprot.org/uniprotkb/{id}.fasta</code> (módulo 32). Separar 'descargar' y 'leer' en dos pasos tiene una ventaja: el archivo queda guardado y no hace falta volver a pedirlo al servidor cada vez.")}
 ${warn("usar <code>SeqIO.read</code> con un archivo que tiene varias secuencias (o ninguna): lanza <code>ValueError</code>. Para varios registros, <code>SeqIO.parse</code>.")}
 <h3>FASTQ: secuencias con calidad</h3>
 <p>Un FASTQ guarda cada lectura con su calidad por base en escala Phred: Q = −10·log10(P_error). Q20 = 1 % de error; Q30 = 0,1 %. El archivo de ejemplo son lecturas de nanopore de un amplicón 18S.</p>
@@ -128,11 +220,55 @@ longitudes = [len(r.seq) for r in lecturas]
 q_medias = [np.mean(r.letter_annotations["phred_quality"]) for r in lecturas]
 print(f"Longitud media {np.mean(longitudes):.0f} pb, rango {min(longitudes)}-{max(longitudes)}")
 print(f"Calidad media global Q{np.mean(q_medias):.1f}")`)}
+${codeBlock(`from Bio import SeqIO
+
+def calcular_calidad_promedio(calidades):
+    return sum(calidades) / len(calidades)
+
+def calcular_probabilidad_error_media(calidades):
+    probabilidades = [10 ** (-q / 10) for q in calidades]
+    return sum(probabilidades) / len(probabilidades)
+
+for lectura in list(SeqIO.parse("ejemplo.fastq", "fastq"))[:6]:
+    q = lectura.letter_annotations["phred_quality"]
+    q_media = calcular_calidad_promedio(q)
+    p_media = calcular_probabilidad_error_media(q)
+    errores_esperados = sum(10 ** (-x / 10) for x in q)
+    print(f"{lectura.id[:10]}  Q media {q_media:5.2f}  P(error) media {p_media:.3f}  "
+          f"P(error) de la Q media {10 ** (-q_media / 10):.3f}  errores esperados {errores_esperados:5.1f}")`)}
+${concepto("La media de las probabilidades no es la probabilidad de la media", "la escala Phred es logarítmica, así que unas pocas bases muy malas disparan la probabilidad de error media aunque la Q media parezca aceptable (compara las dos columnas). Por eso los filtros modernos (DADA2, VSEARCH) usan los <b>errores esperados</b> de cada lectura, la suma de las probabilidades, en vez de la Q media.")}
 ${codeBlock(`import matplotlib.pyplot as plt
 fig, axs = plt.subplots(1, 2, figsize=(9, 3))
 axs[0].hist(longitudes, bins=15, color="tab:blue", edgecolor="black"); axs[0].set_title("Longitud de lecturas")
 axs[1].hist(q_medias, bins=15, color="tab:orange", edgecolor="black"); axs[1].set_title("Calidad media (Phred)")
 plt.show()`)}
+<h3>Control de calidad de una carrera (al estilo FastQC)</h3>
+<p>Con 400 lecturas del mismo experimento (<code>ejemplo_qc.fastq</code>) ya puedes hacer lo que hace FastQC: calidad por posición, distribución de longitudes y errores esperados por lectura.</p>
+${codeBlock(`import numpy as np
+import matplotlib.pyplot as plt
+from Bio import SeqIO
+
+lecturas = list(SeqIO.parse("ejemplo_qc.fastq", "fastq"))
+longitudes = np.array([len(r) for r in lecturas])
+L = int(np.percentile(longitudes, 90))                       # posiciones a mostrar
+matriz = np.full((len(lecturas), L), np.nan)
+for i, r in enumerate(lecturas):
+    q = r.letter_annotations["phred_quality"][:L]
+    matriz[i, :len(q)] = q
+errores = np.array([sum(10 ** (-q / 10) for q in r.letter_annotations["phred_quality"]) for r in lecturas])
+
+media = np.nanmean(matriz, axis=0)
+p10, p90 = np.nanpercentile(matriz, 10, axis=0), np.nanpercentile(matriz, 90, axis=0)
+fig, axs = plt.subplots(1, 3, figsize=(13, 3.4))
+axs[0].fill_between(range(L), p10, p90, alpha=0.3, label="percentiles 10-90")
+axs[0].plot(media, label="media"); axs[0].axhline(20, ls="--", c="red", lw=1, label="Q20")
+axs[0].set_title("Calidad por posición"); axs[0].set_xlabel("Posición (pb)"); axs[0].legend(fontsize=7)
+axs[1].hist(longitudes, bins=30, edgecolor="black"); axs[1].set_title("Longitud de lecturas")
+axs[2].hist(errores, bins=30, color="tab:red", edgecolor="black"); axs[2].set_title("Errores esperados por lectura")
+plt.tight_layout(); plt.show()
+print(f"{len(lecturas)} lecturas | longitud mediana {np.median(longitudes):.0f} pb | "
+      f"{(errores <= 10).mean():.0%} con 10 errores esperados o menos")`)}
+${note("Son lecturas de <b>nanopore</b>: largas y con calidades bajas (Q10-15) comparadas con Illumina (Q30+). Por eso la línea de Q20 queda por encima de la curva: no es un fallo del análisis, es la tecnología. Al interpretar un control de calidad, compara siempre con lo esperable para esa plataforma.")}
 <h3>Crear, modificar y escribir registros</h3>
 ${codeBlock(`from Bio import SeqIO
 from Bio.Seq import Seq
@@ -150,6 +286,21 @@ buenas = (r for r in SeqIO.parse("ejemplo.fastq", "fastq")
           if sum(r.letter_annotations["phred_quality"]) / len(r) >= 10)
 n = SeqIO.write(buenas, "filtradas.fasta", "fasta")
 print(n, "lecturas con Q media ≥ 10 guardadas en filtradas.fasta")`)}
+${codeBlock(`from Bio import SeqIO
+from Bio.Seq import Seq
+from Bio.SeqRecord import SeqRecord
+
+secuencia = Seq("ATGCGCTAATCGCGAAAGCTTAGCGATCGGATCGTAGCTAGCTAGCTACG")
+record = SeqRecord(secuencia, id="Secuencia_1", description="Esto es una secuencia de ADN")
+with open("ejemplo2.fasta", "w") as output_handle:
+    SeqIO.write(record, output_handle, "fasta")
+
+with open("ejemplo2.fasta") as handle:
+    for record in SeqIO.parse(handle, "fasta"):
+        print("Encabezado:", record.id)
+        print("Descripción:", record.description)
+        print("Secuencia:", record.seq)`)}
+${tip("<code>SeqIO.write</code> y <code>SeqIO.parse</code> aceptan tanto un nombre de archivo como un archivo ya abierto (<i>handle</i>). Con el nombre es más corto; con <code>with open(...)</code> controlas tú cuándo se abre y se cierra, que es útil si escribes varias cosas en el mismo archivo.")}
 ${staticCode(`import requests
 from Bio import SeqIO
 
@@ -188,6 +339,12 @@ print("Alineamientos óptimos:", len(alineamientos))
 mejor = alineamientos[0]
 print("Score:", mejor.score)
 print(mejor)`)}
+${codeBlock(`# Puede haber varios alineamientos igual de buenos: el script original los recorre todos
+print("Alineamientos con la puntuación máxima:", len(alineamientos))
+for alignment in sorted(alineamientos):
+    print("Score = %.1f:" % alignment.score)
+    print(alignment)`)}
+${note("Con match = 2, mismatch = −1 y gap = −1, insertar el hueco en una posición u otra puede dar la misma puntuación: el algoritmo devuelve <i>todos</i> los óptimos. Por eso un alineamiento 'óptimo' no es único y conviene fijarse en el score, no en un dibujo concreto.")}
 ${concepto("Global vs local", "el alineamiento <b>global</b> (Needleman-Wunsch) alinea las secuencias de extremo a extremo: útil para secuencias de longitud parecida. El <b>local</b> (Smith-Waterman) busca la región más parecida: útil para encontrar un dominio dentro de una proteína más larga.")}
 ${codeBlock(`from Bio import Align
 from Bio.Align import substitution_matrices
@@ -227,6 +384,96 @@ msa = MultipleSeqAlignment([
 ])
 print(msa)
 print("Columna 2:", msa[:, 1])`)}
+<h3>De distancias a un árbol</h3>
+<p>Con la identidad por pares puedes construir un <b>árbol de distancias</b> (distancia = 1 − identidad). <code>Bio.Phylo</code> lo calcula con UPGMA o Neighbor-Joining y lo dibuja.</p>
+${codeBlock(`from Bio import SeqIO, Align, Phylo
+from Bio.Phylo.TreeConstruction import DistanceMatrix, DistanceTreeConstructor
+import matplotlib.pyplot as plt
+
+alineador_id = Align.PairwiseAligner(mode="global", match_score=1, mismatch_score=0, gap_score=0)
+def identidad_simple(a, b):
+    return alineador_id.score(a, b) / max(len(a), len(b))
+
+def arbol_de(registros, metodo="upgma"):
+    nombres = [r.id for r in registros]
+    matriz = [[1 - identidad_simple(registros[i].seq, registros[j].seq) if i != j else 0
+               for j in range(i + 1)] for i in range(len(registros))]   # triangular inferior
+    dm = DistanceMatrix(nombres, matriz)
+    constructor = DistanceTreeConstructor()
+    return constructor.upgma(dm) if metodo == "upgma" else constructor.nj(dm)
+
+registros = list(SeqIO.parse("citocromo_c.fasta", "fasta"))
+arbol = arbol_de(registros)
+Phylo.draw_ascii(arbol)
+fig, ax = plt.subplots(figsize=(6, 2.8))
+Phylo.draw(arbol, axes=ax, do_show=False)
+plt.show()`)}
+${warn("los datos de ejemplo de clase no son reales. En <code>citocromo_c.fasta</code> las secuencias de levadura y de planta son <b>idénticas</b> letra a letra, y la del citocromo c real de levadura es muy distinta de la humana. Un árbol hecho con ellas sale 'bonito' pero no dice nada de biología. Lo mismo ocurre en el ejemplo de Clustal del script: 'human_HBB' y 'mouse_HBB' son la misma secuencia copiada. Antes de analizar, comprueba de dónde salen tus secuencias.")}
+<h3>Con secuencias reales: hemoglobina e insulina de humano y ratón</h3>
+<p>Descargamos de UniProt las proteínas reales que el script intentaba comparar. La pregunta biológica es interesante: ¿se agrupan por <b>especie</b> (humano con humano) o por <b>gen</b> (hemoglobina con hemoglobina)? <b>Requiere conexión.</b></p>
+${codeBlock(`from io import StringIO
+from Bio import SeqIO
+
+ids = {"HBB_humana": "P68871", "HBB_raton": "P02088", "INS_humana": "P01308", "INS_raton": "P01325"}
+reales = []
+for nombre, acc in ids.items():
+    texto = await obtener_texto(f"https://rest.uniprot.org/uniprotkb/{acc}.fasta")
+    rec = SeqIO.read(StringIO(texto), "fasta")
+    descripcion = rec.description.split(" OS=")[0].split(" ", 1)[1]
+    rec.id, rec.description = nombre, descripcion
+    reales.append(rec)
+    print(f"{nombre:11s} {acc}  {len(rec.seq):4d} aa  {descripcion}")`)}
+${codeBlock(`from Bio import Align, Phylo
+from Bio.Align import substitution_matrices
+import pandas as pd
+
+alineador_prot = Align.PairwiseAligner(mode="global", open_gap_score=-10, extend_gap_score=-0.5)
+alineador_prot.substitution_matrix = substitution_matrices.load("BLOSUM62")
+
+def identidad_real(a, b):
+    aln = alineador_prot.align(a, b)[0]
+    iguales = sum(sum(x == y for x, y in zip(a[s1:e1], b[s2:e2]))
+                  for (s1, e1), (s2, e2) in zip(*aln.aligned))
+    return iguales / min(len(a), len(b)) * 100
+
+nombres = [r.id for r in reales]
+tabla = pd.DataFrame([[identidad_real(a.seq, b.seq) for b in reales] for a in reales], index=nombres, columns=nombres)
+print(tabla.round(0))
+
+identidad_simple = lambda a, b: identidad_real(a, b) / 100     # el árbol usará la identidad con BLOSUM62
+Phylo.draw_ascii(arbol_de(reales))`)}
+${concepto("Ortólogos", "HBB humana y HBB de ratón son <b>ortólogos</b>: el mismo gen en dos especies, separados por la especiación. Se parecen mucho más entre sí que la HBB humana con la insulina humana. Por eso el árbol agrupa por gen y no por especie, y es la base de cómo se infieren funciones por homología.")}
+<h3>Alineamiento múltiple real con Clustal Omega (servicio web del EBI)</h3>
+<p>El script de clase ejecutaba <code>clustalx.exe</code> desde Python, lo que solo funciona en el ordenador donde está instalado. El EBI ofrece Clustal Omega como API: envías las secuencias, esperas a que termine el trabajo y descargas el alineamiento (el mismo esquema asíncrono que el mapeo de IDs del módulo 33). Necesita un correo electrónico para identificar los trabajos.</p>
+${codeBlock(`import asyncio
+from io import StringIO
+from Bio import AlignIO
+
+EMAIL = "tu_correo@ejemplo.com"           # escribe aquí tu correo real
+fasta = "".join(rec.format("fasta") for rec in reales)
+base = "https://www.ebi.ac.uk/Tools/services/rest/clustalo"
+
+if EMAIL.endswith("@ejemplo.com"):
+    print("Escribe tu correo en EMAIL y vuelve a ejecutar la celda.")
+else:
+    r = await web.post(f"{base}/run", data={"email": EMAIL, "sequence": fasta, "stype": "protein", "outfmt": "clustal"})
+    if r.status_code != 200:
+        print("No se pudo lanzar el trabajo:", r.status_code, r.text[:200])
+    else:
+        trabajo = r.text.strip()
+        print("Trabajo enviado:", trabajo)
+        estado = "RUNNING"
+        for _ in range(40):
+            estado = (await web.get(f"{base}/status/{trabajo}")).text.strip()
+            if estado not in ("RUNNING", "QUEUED"):
+                break
+            await asyncio.sleep(3)
+        print("Estado final:", estado)
+        if estado == "FINISHED":
+            texto = (await web.get(f"{base}/result/{trabajo}/aln-clustal")).text
+            alineamiento = AlignIO.read(StringIO(texto), "clustal")
+            print(alineamiento)
+            print(texto[:1200])`)}
 ${staticCode(`from Bio.Align.Applications import ClustalwCommandline   # obsoleto en Biopython moderno
 from Bio import AlignIO
 import subprocess
@@ -267,6 +514,28 @@ for modelo in estructura:
         print("Primer residuo:", primero.get_resname(), primero.id[1])
         for atomo in list(primero)[:4]:
             print("   ", atomo.get_name(), atomo.coord.round(2))`)}
+${codeBlock(`from Bio import PDB
+
+def analizar_pdb(ruta):
+    """Resumen de un archivo PDB: modelos, cadenas, tipo de cadena y heteromoléculas."""
+    estructura = PDB.PDBParser(QUIET=True).get_structure("proteina", ruta)
+    print(f"Archivo '{ruta}': {len(estructura)} modelo(s)")
+    for modelo in estructura:
+        print(f"Modelo {modelo.id}: {len(modelo)} cadenas")
+        for cadena in modelo:
+            estandar = [r for r in cadena if r.id[0] == " "]
+            es_adn = bool(estandar) and estandar[0].get_resname().strip() in ("DA", "DT", "DG", "DC")
+            otros = sorted({r.get_resname() for r in cadena if r.id[0] != " "})
+            print(f"  Cadena {cadena.id}: {len(estandar):4d} residuos ({'ADN' if es_adn else 'proteína'})  otros: {otros}")
+    return estructura
+
+estructura = analizar_pdb("1TUP.pdb")            # el archivo completo: 3 cadenas de p53 + 2 de ADN
+
+primer = next(iter(estructura[0]["A"]))         # primer residuo de la cadena A, como en el script
+print(f"\\nPrimer residuo de A: {primer.get_resname()} {primer.get_id()} con {len(primer)} átomos")
+for atomo in primer:
+    print(f"   {atomo.get_name():4s} {atomo.get_coord().round(2)}")`)}
+${tip("El script de clase usa tres <code>break</code> anidados para imprimir solo el primer modelo, la primera cadena y el primer residuo. Funciona, pero es fácil equivocarse con su sangría. <code>next(iter(...))</code> coge directamente el primer elemento, y un resumen por cadena suele ser más útil que volcar átomos.")}
 ${concepto("Residuos y heteroátomos", "<code>residuo.id</code> es una tupla <code>(hetero, número, inserción)</code>. Si el primer campo es un espacio es un aminoácido estándar; <code>'W'</code> es agua y <code>'H_ZN'</code> un ligando (aquí, zinc).")}
 <h3>Distancias e interacciones</h3>
 ${codeBlock(`from Bio.PDB import PDBParser, is_aa
@@ -294,12 +563,20 @@ pares_no_consecutivos = [(a.get_parent(), b.get_parent()) for a, b in pares
                          if abs(a.get_parent().id[1] - b.get_parent().id[1]) > 1]
 print("Pares CA-CA < 4 Å:", len(pares), "| no consecutivos:", len(pares_no_consecutivos))`)}
 ${tip("El script de clase comparaba todos los pares de residuos con dos bucles (n² comparaciones). <code>NeighborSearch</code> usa un árbol espacial (KD-tree) y es muchísimo más rápido en proteínas grandes: un buen ejemplo de la complejidad algorítmica del módulo 18.")}
+${warn("en <code>Script5.py</code> (repaso) se buscan 'interacciones' entre residuos cuyos Cα estén a menos de <b>3,7 Å</b>. Dos Cα consecutivos de una cadena están siempre a unos 3,8 Å y los no consecutivos casi nunca bajan de 4 Å, así que con ese umbral prácticamente no aparece nada. Además, la función se llama <code>interaction_probability</code> pero devuelve pares, no una probabilidad, y compara todos con todos (n²). Para contactos se suelen usar 6-8 Å entre Cα o unos 4 Å entre átomos pesados, y <code>NeighborSearch</code> para que sea rápido.")}
 <h3>mmCIF como diccionario</h3>
-${codeBlock(`from Bio.PDB.MMCIF2Dict import MMCIF2Dict
+${codeBlock(`from Bio import PDB
 
-texto = await obtener_texto("https://files.rcsb.org/download/1TUP.cif")   # requiere conexión
-with open("1TUP.cif", "w") as f:
-    f.write(texto)
+parser = PDB.MMCIFParser(QUIET=True)
+estructura_cif = parser.get_structure("proteina", "1TUP.cif")      # archivo mmCIF completo
+print("Cadenas en el CIF:", [c.id for c in estructura_cif[0]])
+
+cabecera = parser._mmcif_dict          # así lo hace el script de clase (atributo "privado")
+for clave in ["_cell.length_a", "_cell.length_b", "_cell.length_c",
+              "_cell.angle_alpha", "_cell.angle_beta", "_cell.angle_gamma", "_cell.Z_PDB"]:
+    print(f"{clave:20s} {cabecera.get(clave, ['No disponible'])[0]}")`)}
+${warn("<code>parser._mmcif_dict</code> empieza por guion bajo: es un detalle interno de Biopython, no parte de su API pública, y puede cambiar o desaparecer en una versión nueva sin aviso. La forma estable es <code>MMCIF2Dict</code>, que lee el mismo diccionario directamente del archivo.")}
+${codeBlock(`from Bio.PDB.MMCIF2Dict import MMCIF2Dict
 
 cif = MMCIF2Dict("1TUP.cif")
 print("Número de claves:", len(cif))
@@ -308,7 +585,25 @@ print("Autores:", cif["_audit_author.name"][:4])
 print("Celda (a, b, c):", cif["_cell.length_a"], cif["_cell.length_b"], cif["_cell.length_c"])
 print("Grupo espacial:", cif["_symmetry.space_group_name_H-M"])
 print("Entidades:", cif["_entity.pdbx_description"])`)}
-${note("<code>obtener_texto()</code> y <code>obtener_json()</code> son ayudas de esta web para descargar datos desde el navegador (se usan con <code>await</code>). En tu ordenador harás lo mismo con <code>requests</code>, como en el bloque siguiente.")}
+<h3>Heteromoléculas: ligandos, iones y agua</h3>
+${codeBlock(`import pandas as pd
+from Bio.PDB.MMCIF2Dict import MMCIF2Dict
+
+heteromoleculas = []
+for modelo in estructura_cif:
+    for cadena in modelo:
+        for residuo in cadena:
+            if residuo.id[0] != " " and residuo.resname != "HOH":     # hetero, pero no agua
+                heteromoleculas.append((cadena.id, residuo.resname, residuo.id[1]))
+print("Heteromoléculas encontradas (sin agua):", heteromoleculas)
+
+cif = MMCIF2Dict("1TUP.cif")
+df_heteromoleculas = pd.DataFrame({"Nombre": cif.get("_pdbx_entity_nonpoly.name", []),
+                                   "ID de tres letras": cif.get("_pdbx_entity_nonpoly.comp_id", [])})
+print(df_heteromoleculas)
+df_heteromoleculas.to_csv("heteromoleculas_1TUP.csv", index=False)
+print(open("heteromoleculas_1TUP.csv").read())`)}
+${note("Esta es la 'Actividad 2' del script: una tabla con nombre y código de 3 letras de cada molécula no polimérica. Con una lista de estructuras, la misma idea produce un archivo como <code>heteromoleculas.csv</code>, que en el Proyecto C (módulo 38) se convierte en un SDF con RDKit.")}
 ${staticCode(`import os, requests
 from Bio.PDB import MMCIFParser, PDBList
 
@@ -911,6 +1206,36 @@ plt.hist(df["value"].clip(upper=20), bins=60, color="skyblue", edgecolor="black"
 plt.title("Carga mutacional tumoral (TMB) en cáncer de mama TCGA")
 plt.xlabel("Mutaciones no sinónimas por Mb (recortado a 20)"); plt.ylabel("Muestras")
 plt.show()`)}
+${codeBlock(`import pandas as pd
+
+BASE_URL = "https://www.cbioportal.org"
+
+async def get_study(study_id):
+    response = await web.get(f"{BASE_URL}/api/studies/{study_id}")
+    if response.status_code == 200:
+        print("Conexión correcta con cBioPortal")
+        return response.json()
+    print(f"Error {response.status_code}: no se pudo obtener el estudio {study_id}")
+
+study = await get_study("brca_tcga")
+print(f"Descripción: {study.get("description")[:160]}...")
+print(f"Tipo: {study.get("cancerTypeId")}")
+print(f"Nombre: {study.get("cancerType").get("name")}")
+
+samples = (await web.get(f"{BASE_URL}/api/studies/brca_tcga/samples")).json()
+print("Muestras en el estudio:", len(samples))
+print(pd.Series([s.get("sampleType") for s in samples]).value_counts())`)}
+${note("Fíjate en <code>f\"{study.get(\"description\")}\"</code>: comillas dobles dentro de un f-string con comillas dobles. Es válido desde <b>Python 3.12</b> (esta web usa 3.12), pero en 3.11 o anteriores da <code>SyntaxError</code>. Si el script de clase te falla en otro ordenador, este es el motivo: usa comillas simples dentro, <code>f\"{study.get('description')}\"</code>, y funcionará en cualquier versión.")}
+${tip("El script de clase descarga <b>todos</b> los datos clínicos del estudio (decenas de miles de registros de todos los atributos) y después filtra <code>TMB_NONSYNONYMOUS</code> en pandas. Arriba se pide ya filtrado con <code>attributeId=</code>: pide al servidor solo lo que necesitas y la consulta será mucho más rápida y ligera.")}
+${staticCode(`# pip install pybioportal   (cliente de Python para cBioPortal)
+from pybioportal import clinical_attributes as ca
+from pybioportal import clinical_data as cd
+
+atributos = ca.fetch_clinical_attributes(study_ids=["brca_tcga", "brca_bccrc"])
+supervivencia = cd.fetch_all_clinical_data_in_study(study_id="brca_tcga",
+                                                    attribute_ids=["OS_STATUS", "OS_MONTHS", "RACE"],
+                                                    clinical_data_type="PATIENT", ret_format="WIDE")
+print(supervivencia.head())`, "Con la librería pybioportal (en tu ordenador)")}
 ${note("Si alguna celda falla con un error de red, usa <code>await probar_apis()</code> (módulo 32) para ver qué servicio no responde desde tu navegador. Sé respetuoso con los servidores: no lances cientos de peticiones seguidas; si haces bucles, añade una pausa (<code>asyncio.sleep(0.3)</code>). NCBI, por ejemplo, limita a 3 peticiones por segundo sin clave de API.")}
 ${origen("BIOPYTHON7_7_Entrez.py y clase_8_repaso/Cbioportal.py")}
 ${resumen(["Entrez: <code>esearch</code> busca identificadores, <code>esummary</code>/<code>efetch</code> dan los detalles; <code>db=</code> elige la base (pubmed, gene, nucleotide, clinvar...).", "Con Biopython: <code>Entrez.email = ...</code> es obligatorio; en el navegador, JSON directo con <code>retmode=json</code>.", "cBioPortal: <code>/api/studies/{id}</code> y <code>/clinical-data</code>; conviértelo en un DataFrame y analízalo.", "Respeta los límites de peticiones de cada servicio."])}
@@ -1197,6 +1522,140 @@ writer.close()
 print("Moléculas guardadas:", len(Chem.SDMolSupplier("heteromoleculas.sdf")))`)}
 ${origen("clase_9/rdkit_8_act2.py, Script8.py y heteromoleculas.xlsx")}
 
+<h3>Proyecto E · De estructuras del PDB a fichas de UniProt y PubChem</h3>
+<p>Un pipeline completo de consulta a bases de datos: partimos de identificadores del PDB, los traducimos a UniProt, construimos una tabla con la información de cada proteína y consultamos en PubChem los cofactores metálicos. <b>Requiere conexión.</b></p>
+${codeBlock(`import asyncio
+import pandas as pd
+
+pdb_ids = ["1TUP", "2OCJ", "1A3N", "XXXX"]           # el último no existe: el pipeline debe sobrevivir
+
+async def obtener_uniprot_id_desde_pdb(pdb_id):
+    r = await web.post("https://rest.uniprot.org/idmapping/run", data={"from": "PDB", "to": "UniProtKB", "ids": pdb_id})
+    if r.status_code != 200:
+        print(f"No se pudo lanzar el mapeo de {pdb_id}"); return None
+    job_id = r.json()["jobId"]
+    for _ in range(10):
+        datos = (await web.get(f"https://rest.uniprot.org/idmapping/status/{job_id}")).json()
+        if datos.get("jobStatus") in ("NEW", "RUNNING"):
+            await asyncio.sleep(2); continue
+        break
+    if "results" not in datos:
+        datos = (await web.get(f"https://rest.uniprot.org/idmapping/results/{job_id}")).json()
+    resultados = datos.get("results", [])
+    if not resultados:
+        print(f"No se encontraron resultados para el PDB ID {pdb_id}."); return None
+    destino = resultados[0]["to"]
+    uniprot_id = destino["primaryAccession"] if isinstance(destino, dict) else destino
+    print(f"{pdb_id} -> {uniprot_id}")
+    return uniprot_id
+
+uniprot_ids = [await obtener_uniprot_id_desde_pdb(i) for i in pdb_ids]
+df = pd.DataFrame({"pdb_ids": pdb_ids, "uniprot_ids": uniprot_ids}).dropna().reset_index(drop=True)
+print(df)`)}
+${codeBlock(`async def obtener_informacion_uniprot(uniprot_id):
+    r = await web.get(f"https://rest.uniprot.org/uniprotkb/{uniprot_id}.json")
+    if r.status_code != 200:
+        print(f"No se pudo obtener la información de UniProt para el ID {uniprot_id}.")
+        return {}
+    d = r.json()
+    desc = d["proteinDescription"]
+    gen = (d.get("genes") or [{}])[0]
+    tipo = d["entryType"]                                    # p. ej. "UniProtKB reviewed (Swiss-Prot)"
+    return {"fecha_publicacion": d["entryAudit"]["firstPublicDate"],
+            "fecha_modificacion": d["entryAudit"]["lastAnnotationUpdateDate"],
+            "revisado": "TrEMBL" if "unreviewed" in tipo.lower() else "Swiss-Prot",
+            "nombre_gen": gen.get("geneName", {}).get("value"),
+            "sinonimos": ", ".join(x["value"] for x in gen.get("synonyms", [])),
+            "organismo": d["organism"]["scientificName"],
+            "nombre_proteina": (desc.get("recommendedName") or (desc.get("submissionNames") or [{}])[0]).get("fullName", {}).get("value"),
+            "longitud": d["sequence"]["length"],
+            "n_estructuras_pdb": sum(1 for ref in d.get("uniProtKBCrossReferences", []) if ref["database"] == "PDB")}
+
+fichas = [await obtener_informacion_uniprot(u) for u in df["uniprot_ids"]]
+df = pd.concat([df, pd.DataFrame(fichas)], axis=1)
+print(df.drop(columns=["fecha_modificacion"]).to_string(index=False))`)}
+${warn("en <code>Script1.py</code> la línea <code>revisado = 'Swiss-Prot' if datos['entryType'] else 'Trembl'</code> da <b>siempre</b> 'Swiss-Prot': <code>entryType</code> es un texto no vacío, y un texto no vacío es verdadero en un <code>if</code>. Hay que mirar su contenido. Ojo también al orden: 'unreviewed' contiene 'reviewed', así que se comprueba primero la palabra más larga. Por último, el script lanza el pipeline con IDs inventados (<code>2xyz</code>, <code>10yza</code>...) y depende de que cada función devuelva <code>None</code> sin romperse: es justo lo que hay que probar.")}
+${codeBlock(`import urllib.parse
+
+async def obtener_informacion_pubchem(nombre):
+    r = await web.get(f"https://pubchem.ncbi.nlm.nih.gov/rest/pug/compound/name/{urllib.parse.quote(nombre, safe='')}/JSON")
+    if r.status_code != 200:
+        print(f"Error al consultar PubChem para {nombre}: {r.status_code}")
+        return {"Nombre": nombre}
+    comp = r.json()["PC_Compounds"][0]
+    info = {"Nombre": nombre, "CID": comp["id"]["id"]["cid"], "IUPAC": [], "InChIKey": "", "InChI": "", "Peso": None, "SMILES": ""}
+    for prop in comp["props"]:
+        etiqueta, valor = prop["urn"]["label"], prop["value"].get("sval")
+        if etiqueta == "IUPAC Name":
+            info["IUPAC"].append((valor, prop["urn"].get("name")))
+        elif etiqueta == "InChIKey":
+            info["InChIKey"] = valor
+        elif etiqueta == "InChI":
+            info["InChI"] = valor
+        elif etiqueta == "Molecular Weight":
+            info["Peso"] = valor
+        elif etiqueta == "SMILES":
+            info["SMILES"] = valor
+    return info
+
+cofactores = pd.DataFrame([await obtener_informacion_pubchem(c) for c in ["zinc(2+)", "magnesium(2+)", "iron(2+)"]])
+print(cofactores[["Nombre", "CID", "Peso", "InChIKey", "SMILES"]].to_string(index=False))`)}
+${note("El script original declara <code>global datos</code> dentro de la función para poder inspeccionar la respuesta después. Funciona, pero hace que la función dependa de (y modifique) una variable de fuera, una fuente clásica de errores difíciles de rastrear. Si necesitas la respuesta, devuélvela con <code>return</code>.")}
+${origen("clase_8_repaso/Script1.py")}
+
+<h3>Proyecto F · Proteínas relacionadas con la neurodegeneración</h3>
+<p>Una búsqueda en UniProt devuelve hasta 500 proteínas; con Biopython calculamos sus propiedades y comparamos humano y ratón. <b>Requiere conexión.</b></p>
+${codeBlock(`import pandas as pd
+
+params = {"query": "neurodegeneration", "format": "json", "size": 500,
+          "fields": "accession,id,protein_name,organism_name,sequence"}      # solo los campos que usamos
+response = await web.get("https://rest.uniprot.org/uniprotkb/search", params=params)
+
+filas = []
+if response.status_code == 200:
+    for protein in response.json()["results"]:
+        desc = protein.get("proteinDescription", {})
+        nombre = (desc.get("recommendedName") or (desc.get("submissionNames") or [{}])[0]).get("fullName", {}).get("value", "")
+        seq = protein["sequence"]["value"]
+        filas.append({"Uniprot_id": protein["uniProtkbId"], "Uniprot_name": nombre, "Uniprot_seq": seq,
+                      "Uniprot_lenseq": len(seq), "Uniprot_Organism": protein["organism"]["scientificName"]})
+else:
+    print(f"Error al obtener la información de la proteína: {response.status_code}")
+
+df = pd.DataFrame(filas)
+print(df.shape)
+print(df["Uniprot_Organism"].value_counts().head(6))`)}
+${tip("Con <code>fields=</code> UniProt devuelve solo las columnas pedidas. Para 500 proteínas, la respuesta completa pesa varios megas (anotaciones, referencias, características...); con 5 campos, una fracción. Es la diferencia entre una consulta que tarda un segundo y otra que tarda un minuto.")}
+${codeBlock(`import numpy as np
+from Bio.SeqUtils.IsoelectricPoint import IsoelectricPoint as IP
+from Bio.SeqUtils import molecular_weight
+
+def peso_seguro(secuencia):
+    try:
+        return molecular_weight(secuencia, "protein")
+    except ValueError:                       # letras como X (desconocido) o U (selenocisteína)
+        return np.nan
+
+df["Isoelectric_point"] = df["Uniprot_seq"].apply(lambda x: IP(x).pi())
+df["Molecular_weight"] = df["Uniprot_seq"].apply(peso_seguro)
+print("Proteínas sin peso calculable:", df["Molecular_weight"].isna().sum())
+print(df[["Uniprot_lenseq", "Isoelectric_point", "Molecular_weight"]].corr().round(3))`)}
+${warn("en <code>Script2.py</code>, <code>molecular_weight(x, 'protein')</code> se aplica a todas las secuencias sin protección. Basta una proteína con una <code>X</code> o una <code>U</code> para que lance <code>ValueError</code> y se pierda todo el cálculo. Con datos reales, envuelve los cálculos que pueden fallar en <code>try/except</code> y cuenta cuántos casos has descartado.")}
+${codeBlock(`import matplotlib.pyplot as plt
+from pandas.plotting import scatter_matrix
+
+variables = ["Uniprot_lenseq", "Isoelectric_point", "Molecular_weight"]
+scatter_matrix(df[variables], figsize=(8, 6))
+plt.show()
+
+fig, axs = plt.subplots(1, 2, figsize=(11, 3.6))
+for ax, (organismo, color) in zip(axs, [("Homo sapiens", "tab:blue"), ("Mus musculus", "tab:red")]):
+    sub = df[df["Uniprot_Organism"] == organismo]
+    ax.hist(sub["Isoelectric_point"], bins=25, color=color, edgecolor="black")
+    ax.set_title(f"{organismo}: punto isoeléctrico (n = {len(sub)})"); ax.set_xlabel("pI")
+plt.tight_layout(); plt.show()`)}
+${concepto("Una correlación esperada", "la longitud y el peso molecular correlacionan casi perfectamente (r ≈ 1): cada aminoácido pesa de media unos 110 Da. Cuando dos variables miden prácticamente lo mismo, no aportan información distinta a un modelo; detectarlo con <code>corr()</code> o <code>scatter_matrix</code> es parte del análisis exploratorio.")}
+${origen("clase_8_repaso/Script2.py")}
 <h3>Proyecto D · Tu propio mini-pipeline</h3>
 ${exercise("Informe de una proteína", "Combina lo aprendido: a partir de <code>P04637.fasta</code> crea un diccionario <code>informe</code> con las claves <code>'id'</code> (el identificador del registro), <code>'longitud'</code>, <code>'peso_kda'</code> (peso molecular en kDa redondeado a 1 decimal), <code>'pI'</code> (punto isoeléctrico redondeado a 2 decimales) y <code>'top3'</code> (lista con los 3 aminoácidos más frecuentes).",
 `from Bio import SeqIO
@@ -1223,7 +1682,7 @@ informe = {
     "top3": [aa for aa, _ in sorted(pa.count_amino_acids().items(), key=lambda x: -x[1])[:3]],
 }
 print(informe)`)}
-${note("🎉 Has completado todo el temario. Ideas para seguir: automatiza un informe de calidad de tus propias lecturas FASTQ, construye una pequeña base de datos de ligandos de tus proteínas favoritas o publica tus análisis como notebooks en GitHub.")}
+${note("Con esto cierras el bloque de bioinformática. El último bloque del curso, <b>aprendizaje automático</b> (módulos 39-43), usa todo lo anterior para entrenar modelos que predicen, clasifican y agrupan.")}
 ${resumen(["Un análisis completo: cargar → limpiar → explorar → modelar/calcular → visualizar → guardar.", "En ML, separa entrenamiento y test antes de ajustar cualquier transformación.", "Las APIs permiten enriquecer tus datos con información de bases públicas.", "Escribe funciones pequeñas y comprobables: es lo que hace que un script se convierta en un pipeline."])}
 </div>`}
 );
