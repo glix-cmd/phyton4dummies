@@ -46,7 +46,7 @@ function _rec(item, html){
   return `<!--NB${item.k === 'ex' ? 'X' : 'C'}:${i}-->${html}<!--/NB${item.k === 'ex' ? 'X' : 'C'}-->`;
 }
 function staticCode(code, label='Para ejecutar en tu ordenador (VS Code / Colab)'){
-  return _rec({k:'code', c:code}, _staticHTML(code, label));
+  return _rec({k:'code', c:code, l:label}, _staticHTML(code, label));
 }
 /* Celda RDKit: RDKit no existe para Python en el navegador, se ejecuta en Colab / en tu ordenador */
 function rdkitBlock(code){

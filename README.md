@@ -1,6 +1,6 @@
-# Aprende Python desde cero — v2.6
+# Aprende Python desde cero — v2.7
 
-Curso interactivo de **43 módulos** que va desde el primer `print()` hasta el análisis de secuencias, estructuras de proteínas y fármacos. Python se ejecuta de verdad en el navegador gracias a [Pyodide](https://pyodide.org): NumPy, pandas, SciPy, Matplotlib, Seaborn, Biopython y scikit-learn sin instalar nada. **Excepción: RDKit** (módulos 36, 37 y el Proyecto C del 38) no existe para el navegador; para esos módulos hay cuadernos de Colab en `notebooks/`.
+Curso interactivo de **49 módulos** que va desde el primer `print()` hasta el análisis de secuencias, estructuras de proteínas y fármacos. Python se ejecuta de verdad en el navegador gracias a [Pyodide](https://pyodide.org): NumPy, pandas, SciPy, Matplotlib, Seaborn, Biopython y scikit-learn sin instalar nada, incluido un bloque completo de machine learning. TensorFlow/Keras y PyTorch no existen para el navegador: el bloque de deep learning hace en la web todo lo posible (incluido usar el modelo convolucional entrenado en clase) y trae cuadernos de Colab con el código de Keras y PyTorch. **Excepción: RDKit** (módulos 36, 37 y el Proyecto C del 38) no existe para el navegador; para esos módulos hay cuadernos de Colab en `notebooks/`.
 
 ## Cómo usarlo
 1. Descomprime la carpeta completa (no saques `index.html`: necesita `css/` y `js/`).
@@ -14,8 +14,9 @@ Curso interactivo de **43 módulos** que va desde el primer `print()` hasta el a
 | ⚙️ Intermedio | 9 Funciones nativas · 10 Colecciones · 11 Cadenas · 12 Expresiones regulares · 13 math, random y os · 14 Excepciones · 15 Archivos |
 | 🚀 Avanzado | 16 POO y herencia · 17 Comprensiones y generadores · 18 Depuración y complejidad · 19 Proyectos |
 | 📊 Ciencia de datos | 20 NumPy I · 21 NumPy II (biología) · 22 SciPy · 23 pandas I · 24 pandas II (+ PyArrow/Polars) · 25 Matplotlib · 26 Seaborn (+ comparación) · 27 PIL |
-| 🧬 Bioinformática | 28 Biopython: Seq y SeqUtils · 29 FASTA/FASTQ · 30 Alineamientos · 31 Estructuras PDB/mmCIF · 32 APIs I: UniProt · 33 APIs II: RCSB PDB, descargas y mapeo de IDs · 34 APIs III: PubChem, ChEMBL y ChEBI · 35 APIs IV: Entrez y cBioPortal · 36 RDKit I · 37 RDKit II · 38 Proyectos finales |
-| 🤖 Aprendizaje automático | 39 Regresión y sobreajuste · 40 Clasificación y fronteras de decisión · 41 Pingüinos y reseñas (texto) · 42 Redes neuronales con dígitos · 43 Clustering: K-means y DBSCAN |
+| 🧬 Bioinformática | 28 Biopython: Seq y SeqUtils · 29 FASTA/FASTQ · 30 Alineamientos · 31 Estructuras PDB/mmCIF · 32 APIs I: UniProt · 33 APIs II: RCSB PDB, descargas y mapeo de IDs · 34 APIs III: PubChem, ChEMBL y ChEBI · 35 APIs IV: Entrez y cBioPortal · 36 RDKit I · 37 RDKit II · 38 Proyectos de repaso |
+| 🤖 Machine learning | 39 Flujo de trabajo y regresión lineal · 40 Regresión polinómica y sobreajuste · 41 Clasificación y fronteras de decisión · 42 Evaluar clasificadores (pingüinos) · 43 Texto y redes neuronales (opiniones de Amazon y dígitos) · 44 Clustering (K-means y DBSCAN) |
+| 🧠 Deep learning | 45 Redes neuronales con Keras (cáncer de mama) · 46 Redes convolucionales y el modelo de clase (con pizarra para dibujar dígitos) · 47 API funcional y HOG · 48 Imágenes propias, aumento de datos y webcam · 49 PyTorch y el bucle de entrenamiento |
 
 ## Atajos
 `Ctrl+Enter` (o `Shift+Enter`) ejecuta la celda · `Ctrl+K` o `/` abre la búsqueda de módulos · `Alt+←` / `Alt+→` cambian de módulo · `Esc` cierra la búsqueda.
@@ -26,17 +27,19 @@ Explicación breve · celdas editables (`Ctrl+Enter` ejecuta, `Tab` indenta) · 
 ## Estructura
 ```
 ├── index.html
-├── icon.svg, icon-180.png, icon-512.png   → icono de la web (favicon y acceso directo)
+├── icon.svg, favicon-32.png, apple-touch-icon.png   → icono de la web
 ├── README.md
-├── notebooks/                 → cuadernos Jupyter/Colab de RDKit (módulos 36, 37 y proyecto del 38)
+├── notebooks/                 → cuadernos de Colab: RDKit (36-38) y deep learning con Keras y PyTorch (45-49)
 ├── css/styles.css             → estilos, tema claro/oscuro
 └── js/
     ├── data/
     │   ├── datasets.js         → archivos de datos del curso (disco virtual de Python)
     │   ├── modules.js          → helpers de contenido + módulos 1-18
     │   ├── modules-ciencia.js  → módulos 19-22
-    │   ├── modules-bio.js      → módulos 28-38
-    │   └── modules-ml.js       → módulos 39-43
+    │   ├── modules-bio.js      → bioinformática
+    │   ├── modules-ml.js       → machine learning
+    │   ├── modules-dl.js       → deep learning
+    │   └── modelo_mnist.js     → modelo convolucional de clase (se carga solo al usarlo)
     ├── pyRunner.js             → motor Pyodide: librerías, gráficos, APIs, autocorrección
     ├── progress.js             → progreso (localStorage, exportar/importar)
     └── app.js                  → navegación, búsqueda, bienvenida, certificado, tema
@@ -52,6 +55,8 @@ Funcionan igual en tu ordenador con Jupyter (`pip install rdkit seaborn`).
 - `await web.get(url, params=...)` y `await web.post(url, json=... | data=...)`: sustituto de `requests` para el navegador (misma interfaz: `.status_code`, `.json()`, `.text`, `.raise_for_status()`).
 - `await obtener_json(url)` y `await obtener_texto(url)`: atajos que devuelven directamente el JSON o el texto (con reintentos y errores explicados).
 - `await probar_apis()`: comprueba qué servicios responden desde tu navegador.
+- `await cargar_modelo_clase()`: copia al disco virtual `modelo_mnist_convol.h5` (la red convolucional entrenada en clase).
+- `pizarra(al_dibujar=f)` y `leer_pizarra()`: una pizarra para dibujar dígitos; el dibujo se centra como en MNIST y se devuelve como array 28×28.
 - `mostrar_molecula(mol)`, `mostrar_svg(svg)`, `mostrar_imagen(img_pil)`: visualización.
 - Los gráficos de Matplotlib/Seaborn se muestran automáticamente; `input()` abre una ventana del navegador.
 
@@ -66,7 +71,8 @@ Funcionan igual en tu ordenador con Jupyter (`pip install rdkit seaborn`).
 Cada módulo es un objeto `{id, cat, title, body}` en `js/data/`. Helpers: `codeBlock`, `staticCode`, `exercise(título, enunciado, inicial, explicación, test, solución)`, `quiz`, `tip`, `warn`, `concepto`, `resumen`, `origen`.
 
 ## Historial
-- **v2.6** — Clase 8 (repaso) y scripts de machine learning integrados. Nuevo bloque **Aprendizaje automático** (módulos 39-43): regresión lineal y árboles con *diabetes*, regresión polinómica y sobreajuste con viviendas de California, fronteras de decisión del cuaderno *Métodos supervisados* (logística, polinómica, SVM, árboles, random forest, MLP) con comparación train/test, pingüinos, análisis de sentimiento de reseñas de Amazon, redes neuronales con dígitos (`load_digits` en lugar de MNIST) y clustering K-means/DBSCAN con codo y silueta. En el módulo 38, proyectos E (PDB → UniProt → PubChem, `Script1.py`) y F (proteínas de neurodegeneración, `Script2.py`); en el 35, `get_study`, muestras y `pybioportal`; en el 31, nota sobre el umbral de `Script5.py`. Datos nuevos: `penguins.csv` y 2500 reseñas de `amazon_baby.csv`. Errores de los scripts explicados: listas de error train/test cruzadas, escalado antes del split, `fit_transform` dentro del `lambda`, SVM sobrescrito, MLP con activación identidad, solo precisión de entrenamiento, stopwords filtradas antes de normalizar, regresión lineal usada para clasificar, ejes de latitud/longitud intercambiados, ruta de Excel duplicada, `entryType` siempre verdadero, `molecular_weight` sin protección, f-strings con comillas anidadas (solo Python 3.12+). Icono propio: un *prompt* de terminal con un cursor de cuatro colores (A, C, G, T).
+- **v2.7** — Deep learning (clases 13 y 14). Nuevo bloque de 5 módulos (45-49): redes neuronales con Keras sobre cáncer de mama (con la red equivalente entrenada en el navegador), redes convolucionales con el **modelo `modelo_mnist_convol.h5` de clase** leído con h5py e implementado en NumPy (resultados idénticos a Keras, diferencia máxima 3·10⁻⁷), filtros y mapas de activación, **pizarra para dibujar dígitos** y verlos reconocer en directo, API funcional con HOG, lectura de imágenes desde ZIP y carpetas, aumento de datos, uso de modelos con la webcam y un bucle de entrenamiento de PyTorch escrito en NumPy. Cuadernos de Colab para Keras y PyTorch; el código de Keras se ha ejecutado con TensorFlow 2.17. Errores de los scripts explicados: escalado antes de separar, `np.random.seed` que no fija TensorFlow, evaluación del modelo equivocado y forma (784, 1) en el cuaderno de TensorBoard, etiqueta con `file[-5]`, ruta del ZIP sobrescrita, volteos verticales en el aumento de datos, `waitKey` doble en la webcam, capas compartidas en la API funcional, `testloader` sin usar y `train_test_split` sobre un Dataset de PyTorch.
+- **v2.6** — Repaso de la clase 8 y machine learning. Módulo 31: el script de interacciones (Script5), con lo que detecta de verdad un umbral de 3,7 Å entre Cα y una alternativa con contactos no locales. Módulo 35: cBioPortal paso a paso (estudio, muestras, datos clínicos de paciente en formato ancho) y pybioportal. Módulo 38: proyectos E (PDB → UniProt → PubChem, Script1) y F (proteínas de neurodegeneración con pI y peso, Script2). Nuevo bloque de machine learning (módulos 39-44) con los scripts de regresión lineal (diabetes), regresión polinómica (California), el cuaderno de métodos supervisados (fronteras de decisión), pingüinos, opiniones de Amazon, redes neuronales con dígitos y clustering con K-means y DBSCAN. Datos añadidos: `penguins.csv` y una muestra de 3000 reseñas de `amazon_baby.csv`. Errores de los scripts explicados: listas de error de entrenamiento y prueba cruzadas, pipeline ajustado antes de separar, red neuronal con `activation='identity'` (lineal), `fit_transform` sobre datos nuevos, regresión lineal usada como clasificador, stopwords eliminadas antes de pasar a minúsculas (y la eliminación de 'not'), ejes de latitud y longitud intercambiados, rutas de archivo pegadas, `entryType` siempre verdadero, comillas anidadas en f-strings (solo válidas desde Python 3.12). Nuevo icono de la web (doble hélice) como favicon y en la barra superior.
 - **v2.5** — Biopython de la clase 6 integrado (BIOPYTHON_1 a 4): validación de secuencias y `count_overlap`, GC calculado por error sobre una proteína, buscador de ORFs con la secuencia original completa y ejercicio de ORFs en las dos hebras, descarga de FASTA desde UniProt, probabilidad de error media frente a errores esperados por lectura, control de calidad tipo FastQC con 400 lecturas, árboles de distancias con `Bio.Phylo`, secuencias reales de hemoglobina e insulina desde UniProt, alineamiento múltiple real con Clustal Omega (API del EBI) y análisis completo de 1TUP (cadenas, `_mmcif_dict` frente a `MMCIF2Dict`, heteromoléculas a CSV). `1TUP.pdb`, `1TUP.cif` y `ejemplo_qc.fastq` añadidos al disco virtual. Rediseño completo con estética de IDE: explorador de archivos, pestaña, celdas con resaltado de sintaxis y numeración `In [n]` (CodeMirror), barra de estado del intérprete, paleta de comandos (Ctrl+K) que busca también dentro del contenido, portada con cromatograma de TP53, ejercicios superados que se recuerdan, tipografía IBM Plex + JetBrains Mono, paleta basada en los canales de un cromatograma y tema claro/oscuro.
 - **v2.4** — Integración completa de los scripts de `clase_5` (APIs). El antiguo módulo de APIs se divide en cuatro: 32 UniProt (códigos de estado, parámetros, búsquedas y encadenado de consultas), 33 RCSB PDB (datos, búsqueda por secuencia, texto y similitud estructural, descarga de PDB/CIF al disco virtual y mapeo PDB→UniProt con sondeo del trabajo asíncrono), 34 PubChem + ChEMBL + ChEBI (los equivalentes REST de `pubchempy` y `chembl_webresource_client`) y 35 Entrez + cBioPortal. Nuevo objeto `web` (requests asíncrono con `params`, POST JSON/formulario y códigos de estado sin excepción) y ChEMBL en el diagnóstico. RDKit pasa a los módulos 36-38 y sus cuadernos se renombran. Errores de los scripts originales explicados: IDs de relleno que detienen la descarga, resultados de idmapping pedidos antes de que termine el trabajo, `CHEMBL113` etiquetado como aspirina (es cafeína), `CHEBI:17597` descrito como glucosa (es `CHEBI:17234`), consulta de Tourette con nombre y comentario de glioblastoma, SMILES sin escapar en la URL, `substance_id` que contenía un CID y mensaje copiado de otra consulta.
 - **v2.3** — RDKit no existe para Python en el navegador (ni en Pyodide, ni como rueda WebAssembly), así que los módulos 33, 34 y el Proyecto C del 35 pasan a mostrar el código para Colab/tu ordenador, con un aviso claro. Se añaden 3 cuadernos `.ipynb` (instalación, datos, ejercicios con comprobación y soluciones) validados con RDKit real. Se retira la promesa de "RDKit sin instalar nada".

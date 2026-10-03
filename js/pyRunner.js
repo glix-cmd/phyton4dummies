@@ -138,6 +138,68 @@ async def probar_apis():
     if ok == 0:
         print("Ninguno responde: revisa tu conexión, o abre la web con un servidor local (http://localhost) en vez de doble clic en el archivo.")
 
+# ---------- Deep learning: modelo de clase y pizarra ----------
+async def cargar_modelo_clase(ruta="modelo_mnist_convol.h5"):
+    """Copia al disco virtual el modelo convolucional entrenado en clase (Keras 2.10, formato .h5)."""
+    import base64, os
+    if not os.path.exists(ruta):
+        await js.__cargarScript("js/data/modelo_mnist.js")
+        with open(ruta, "wb") as f:
+            f.write(base64.b64decode(str(js.MODELO_MNIST_H5)))
+    print(f"Modelo disponible en '{ruta}' ({os.path.getsize(ruta) / 1e6:.1f} MB)")
+    return ruta
+
+def centrar_mnist(a):
+    """Recorta el trazo, lo encaja en 20x20 y lo centra por su centro de masa en 28x28, como en MNIST."""
+    import numpy as np
+    from PIL import Image
+    ys, xs = np.nonzero(a > 0.1)
+    if len(ys) == 0:
+        return np.zeros((28, 28), dtype="float32")
+    a = a[ys.min():ys.max() + 1, xs.min():xs.max() + 1]
+    h, w = a.shape
+    escala = 20 / max(h, w)
+    im = Image.fromarray((a * 255).astype("uint8")).resize((max(1, round(w * escala)), max(1, round(h * escala))), Image.LANCZOS)
+    r = np.asarray(im, dtype="float32") / 255
+    lienzo = np.zeros((28, 28), dtype="float32")
+    y0, x0 = (28 - r.shape[0]) // 2, (28 - r.shape[1]) // 2
+    lienzo[y0:y0 + r.shape[0], x0:x0 + r.shape[1]] = r
+    yy, xx = np.indices(lienzo.shape)
+    masa = lienzo.sum()
+    dy, dx = int(round(14 - (yy * lienzo).sum() / masa)), int(round(14 - (xx * lienzo).sum() / masa))
+    return np.roll(np.roll(lienzo, dy, axis=0), dx, axis=1)
+
+def imagen_de_pizarra(data_url=None, centrar=True):
+    """Devuelve el dibujo de la pizarra como array 28x28 con valores entre 0 y 1."""
+    import base64, io
+    import numpy as np
+    from PIL import Image
+    url = data_url or js.__ultimaPizarra()
+    if not url:
+        raise ValueError("Primero ejecuta pizarra() y dibuja un dígito")
+    im = Image.open(io.BytesIO(base64.b64decode(str(url).split(",")[1]))).convert("L")
+    a = np.asarray(im, dtype="float32") / 255
+    return centrar_mnist(a) if centrar else np.asarray(im.resize((28, 28)), dtype="float32") / 255
+
+leer_pizarra = imagen_de_pizarra
+_pizarras = {"n": 0}
+
+def pizarra(al_dibujar=None):
+    """Muestra una pizarra para dibujar. Si se pasa al_dibujar(img28) se llama al terminar cada trazo y su texto/HTML se muestra al lado."""
+    from pyodide.ffi import create_proxy
+    _pizarras["n"] += 1
+    pid = "pizarra" + str(_pizarras["n"])
+    js.__appendHTML('<div class="pizarra" id="' + pid + '"></div>')
+    cb = None
+    if al_dibujar is not None:
+        def _cb(url):
+            try:
+                return str(al_dibujar(imagen_de_pizarra(url)))
+            except Exception as e:
+                return "<span class='err'>" + type(e).__name__ + ": " + str(e) + "</span>"
+        cb = create_proxy(_cb)
+    js.__iniciarPizarra(pid, cb)
+
 def _capturar_figuras():
     if "matplotlib.pyplot" not in sys.modules: return
     import matplotlib.pyplot as plt
@@ -187,6 +249,9 @@ async function prepararLibrerias(code){
     await pyodide.loadPackage('micropip');
     await pyodide.runPythonAsync('import micropip\nawait micropip.install("seaborn")\n__seaborn_ok = True');
   }
+  if(/pizarra|cargar_modelo_clase|centrar_mnist/.test(code)){
+    await pyodide.loadPackage(['numpy', 'pillow', 'h5py']);
+  }
   if(/matplotlib|seaborn|\.plot\(|\.hist\(|Phylo\.draw/.test(code)){
     await pyodide.loadPackage('matplotlib');
     pyodide.runPython('import matplotlib\nmatplotlib.use("agg")');
@@ -217,6 +282,49 @@ async function ejecutar(code, out){
     return false;
   }
 }
+
+/* ---------- Pizarra para dibujar dígitos y carga diferida de recursos ---------- */
+window.__ultimaPizarraId = null;
+window.__cargarScript = src => new Promise((ok, ko) => {
+  if(document.querySelector(`script[data-src="${src}"]`)) return ok(true);
+  const s = document.createElement('script'); s.src = src; s.dataset.src = src;
+  s.onload = () => ok(true); s.onerror = () => ko(new Error('No se pudo cargar ' + src));
+  document.head.appendChild(s);
+});
+window.__iniciarPizarra = (id, cb) => {
+  const cont = document.getElementById(id); if(!cont) return;
+  cont.innerHTML = `<div class="pz-area"><canvas width="280" height="280" aria-label="Pizarra para dibujar un dígito"></canvas>
+    <div class="pz-res">Dibuja un dígito del 0 al 9 con el ratón o el dedo.</div></div>
+    <div class="pz-bar"><button class="btn" data-a="borrar">Borrar</button><span class="pz-hint">Trazo blanco sobre fondo negro, como las imágenes de MNIST</span></div>`;
+  const cv = cont.querySelector('canvas'), ctx = cv.getContext('2d'), res = cont.querySelector('.pz-res');
+  if(!ctx){ res.textContent = 'Tu navegador no permite dibujar en un canvas.'; return; }
+  const limpiar = () => { ctx.fillStyle = '#000'; ctx.fillRect(0, 0, cv.width, cv.height); };
+  limpiar();
+  ctx.strokeStyle = '#fff'; ctx.lineWidth = 20; ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+  cv.style.touchAction = 'none';
+  let dibujando = false, ultimo = null;
+  const pos = e => { const r = cv.getBoundingClientRect(); return [(e.clientX - r.left) * cv.width / r.width, (e.clientY - r.top) * cv.height / r.height]; };
+  cv.addEventListener('pointerdown', e => {
+    dibujando = true; ultimo = pos(e); cv.setPointerCapture(e.pointerId);
+    ctx.beginPath(); ctx.arc(ultimo[0], ultimo[1], 10, 0, Math.PI * 2); ctx.fillStyle = '#fff'; ctx.fill();
+  });
+  cv.addEventListener('pointermove', e => {
+    if(!dibujando) return;
+    const p = pos(e); ctx.beginPath(); ctx.moveTo(ultimo[0], ultimo[1]); ctx.lineTo(p[0], p[1]); ctx.stroke(); ultimo = p;
+  });
+  const fin = () => {
+    if(!dibujando) return;
+    dibujando = false; window.__ultimaPizarraId = id;
+    if(cb){ try{ res.innerHTML = cb(cv.toDataURL('image/png')); }catch(err){ res.textContent = 'Error: ' + err.message; } }
+  };
+  ['pointerup', 'pointercancel', 'pointerleave'].forEach(ev => cv.addEventListener(ev, fin));
+  cont.querySelector('[data-a=borrar]').addEventListener('click', () => { limpiar(); res.textContent = 'Dibuja un dígito del 0 al 9 con el ratón o el dedo.'; });
+  window.__ultimaPizarraId = id;
+};
+window.__ultimaPizarra = () => {
+  const c = window.__ultimaPizarraId && document.querySelector('#' + window.__ultimaPizarraId + ' canvas');
+  return c ? c.toDataURL('image/png') : null;
+};
 
 /* ---------- Editores ---------- */
 function getCode(id){ return EDITORS[id] ? EDITORS[id].getValue() : document.getElementById('ta-'+id).value; }

@@ -1,13 +1,14 @@
 /* Interfaz: explorador de módulos, pestaña, portada, módulo, certificado, paleta de comandos y atajos */
 let currentId = 0;   // 0 = portada · 1..N = módulos · 'cert' = certificado
-const CATS = ["Fundamentos", "Intermedio", "Avanzado", "Ciencia de datos", "Bioinformática", "Aprendizaje automático"];
+const CATS = ["Fundamentos", "Intermedio", "Avanzado", "Ciencia de datos", "Bioinformática", "Machine learning", "Deep learning"];
 const CAT_INFO = {
   "Fundamentos":      {color: "var(--a)", dir: "fundamentos",      desc: "Sintaxis, variables, decisiones, bucles y funciones: lo que usa cualquier programa."},
   "Intermedio":       {color: "var(--c)", dir: "intermedio",       desc: "Colecciones, cadenas, expresiones regulares, librerías estándar, errores y archivos."},
   "Avanzado":         {color: "var(--v)", dir: "avanzado",         desc: "Clases, generadores, depuración, eficiencia y los primeros proyectos."},
   "Ciencia de datos": {color: "var(--g)", dir: "ciencia_de_datos", desc: "NumPy, SciPy, pandas, gráficos con Matplotlib y Seaborn, e imágenes con PIL."},
-  "Bioinformática":   {color: "var(--t)", dir: "bioinformatica",   desc: "Biopython, estructuras 3D, bases de datos por API, RDKit y proyectos completos."},
-  "Aprendizaje automático": {color: "var(--m)", dir: "machine_learning", desc: "Regresión, clasificación, texto, redes neuronales y clustering con scikit-learn."},
+  "Bioinformática":   {color: "var(--t)", dir: "bioinformatica",   desc: "Biopython, estructuras 3D, bases de datos por API, RDKit y proyectos de repaso."},
+  "Machine learning": {color: "var(--m)", dir: "machine_learning", desc: "Regresión, sobreajuste, clasificación, texto, redes neuronales y clustering con scikit-learn."},
+  "Deep learning":    {color: "var(--d)", dir: "deep_learning",    desc: "Keras, redes convolucionales con tu modelo de clase, API funcional, imágenes propias y PyTorch."},
 };
 const EX_KEY = 'py101_ex_v1', FOLD_KEY = 'py101_folders_v1';
 const $ = id => document.getElementById(id);
@@ -135,7 +136,7 @@ function renderWelcome(){
     </div>
     <p class="chromo-cap">Cromatograma ilustrativo sobre la secuencia real del inicio de TP53 y su traducción, el comienzo de la proteína p53 (UniProt P04637). En el bloque de bioinformática harás esto mismo con Biopython.</p>
     <h1>Python, de la primera línea al primer genoma</h1>
-    <p class="lede">${total} módulos con código que se ejecuta en tu navegador: fundamentos del lenguaje, ciencia de datos, bioinformática con secuencias, estructuras y bases de datos reales, y aprendizaje automático. No hace falta instalar nada.</p>
+    <p class="lede">${total} módulos con código que se ejecuta en tu navegador: fundamentos del lenguaje, ciencia de datos, bioinformática con secuencias, estructuras y bases de datos reales, machine learning y deep learning. No hace falta instalar nada.</p>
     <div class="hero-actions">
       <button class="btn-primary" onclick="goTo(${hechos > 0 ? ultimo : 1})">${hechos > 0 ? `Continuar en el módulo ${ultimo}` : 'Empezar por el módulo 1'}</button>
       <button class="btn-secondary" onclick="openPalette()">Buscar un módulo <kbd>Ctrl K</kbd></button>
@@ -247,7 +248,7 @@ function indice(){
   for(const m of MODULES){ tmp.innerHTML = m.body(); INDICE[m.id] = norm(tmp.textContent); }
   return INDICE;
 }
-const ALIAS = {ml: 'aprendizaje', 'machine learning': 'machine learning', kmeans: 'k-means', clustering: 'clustering', mlp: 'redes neuronales', regex: 'expresiones regulares', poo: 'orientada a objetos', clases: 'orientada a objetos', df: 'pandas', dataframe: 'pandas',
+const ALIAS = {keras: 'keras', tensorflow: 'keras', pytorch: 'pytorch', torch: 'pytorch', cnn: 'convolucional', convolucional: 'convolucional', dl: 'dl', 'deep learning': 'dl', ml: 'ml', 'machine learning': 'ml', clustering: 'clustering', kmeans: 'clustering', regresion: 'regresion', clasificacion: 'clasificacion', red: 'redes neuronales', regex: 'expresiones regulares', poo: 'orientada a objetos', clases: 'orientada a objetos', df: 'pandas', dataframe: 'pandas',
   grafico: 'matplotlib', graficos: 'matplotlib', plot: 'matplotlib', api: 'apis', fasta: 'fasta', fastq: 'fastq', pdb: 'pdb',
   smiles: 'rdkit', farmacos: 'rdkit', json: 'apis', errores: 'excepciones', try: 'excepciones', listas: 'colecciones', diccionarios: 'colecciones'};
 function filtrarPaleta(){

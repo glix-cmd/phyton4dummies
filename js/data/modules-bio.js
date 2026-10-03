@@ -562,8 +562,52 @@ pares = ns.search_all(radius=4.0)                  # pares de CA a menos de 4 Å
 pares_no_consecutivos = [(a.get_parent(), b.get_parent()) for a, b in pares
                          if abs(a.get_parent().id[1] - b.get_parent().id[1]) > 1]
 print("Pares CA-CA < 4 Å:", len(pares), "| no consecutivos:", len(pares_no_consecutivos))`)}
+${codeBlock(`from Bio import PDB
+import numpy as np
+
+def calculate_distance(atom1, atom2):
+    return np.linalg.norm(atom1.coord - atom2.coord)
+
+def interaction_probability(structure, threshold=4.0):
+    """Versión del script de repaso: pares de Cα a menos de threshold Å dentro de cada cadena."""
+    interactions, total_pairs = {}, 0
+    for model in structure:
+        for chain in model:
+            residues = list(chain.get_residues())
+            for i in range(len(residues)):
+                for j in range(i + 1, len(residues)):
+                    r1, r2 = residues[i], residues[j]
+                    if not (PDB.is_aa(r1) and PDB.is_aa(r2)):
+                        continue
+                    try:
+                        distance = calculate_distance(r1["CA"], r2["CA"])
+                    except KeyError:
+                        continue
+                    total_pairs += 1
+                    if distance < threshold:
+                        interactions[(r1, r2)] = distance
+    return interactions, total_pairs          # el original solo devolvía interactions
+
+structure = PDB.PDBParser(QUIET=True).get_structure("protein", "1TUP.pdb")
+interactions, total_pairs = interaction_probability(structure, threshold=3.7)
+print(f"Pares de aminoácidos comparados: {total_pairs}")
+print(f"Pares a menos de 3,7 Å: {len(interactions)}")
+separaciones = [abs(a.id[1] - b.id[1]) for a, b in interactions]
+print("Separación en la secuencia de esos pares:", sorted(set(separaciones)))
+for (r1, r2), d in list(interactions.items())[:4]:
+    print(f"  {r1.get_resname()} {r1.id[1]} - {r2.get_resname()} {r2.id[1]}: {d:.2f} Å")`)}
+${warn("el script imprimía <code>len(interactions)</code> con el texto 'Número total de pares de aminoácidos', pero ese número son solo los pares <i>cercanos</i>; el total (<code>total_pairs</code>) se calculaba y nunca se usaba. Y hay un problema biológico: la distancia entre los Cα de dos residuos <b>consecutivos</b> ronda los 3,8 Å por la geometría del enlace peptídico. Con un umbral de 3,7 Å casi todo lo que aparece son vecinos de secuencia (separación 1) con un enlace algo más corto, no interacciones. Para contactos reales se usa un umbral de 6-8 Å entre Cα y se excluyen los residuos cercanos en la secuencia.")}
+${codeBlock(`import pandas as pd
+from Bio.PDB import NeighborSearch, is_aa
+
+cadena = structure[0]["A"]
+ca = [r["CA"] for r in cadena if is_aa(r) and "CA" in r]
+contactos = [(a.get_parent(), b.get_parent()) for a, b in NeighborSearch(ca).search_all(8.0)
+             if abs(a.get_parent().id[1] - b.get_parent().id[1]) >= 4]          # al menos 4 residuos de separación
+print(f"Contactos Cα-Cα < 8 Å no locales en la cadena A: {len(contactos)}")
+por_residuo = pd.Series([r.id[1] for par in contactos for r in par]).value_counts()
+print("Residuos con más contactos (núcleo de la proteína):", por_residuo.head(6).to_dict())`)}
 ${tip("El script de clase comparaba todos los pares de residuos con dos bucles (n² comparaciones). <code>NeighborSearch</code> usa un árbol espacial (KD-tree) y es muchísimo más rápido en proteínas grandes: un buen ejemplo de la complejidad algorítmica del módulo 18.")}
-${warn("en <code>Script5.py</code> (repaso) se buscan 'interacciones' entre residuos cuyos Cα estén a menos de <b>3,7 Å</b>. Dos Cα consecutivos de una cadena están siempre a unos 3,8 Å y los no consecutivos casi nunca bajan de 4 Å, así que con ese umbral prácticamente no aparece nada. Además, la función se llama <code>interaction_probability</code> pero devuelve pares, no una probabilidad, y compara todos con todos (n²). Para contactos se suelen usar 6-8 Å entre Cα o unos 4 Å entre átomos pesados, y <code>NeighborSearch</code> para que sea rápido.")}
 <h3>mmCIF como diccionario</h3>
 ${codeBlock(`from Bio import PDB
 
@@ -1206,6 +1250,7 @@ plt.hist(df["value"].clip(upper=20), bins=60, color="skyblue", edgecolor="black"
 plt.title("Carga mutacional tumoral (TMB) en cáncer de mama TCGA")
 plt.xlabel("Mutaciones no sinónimas por Mb (recortado a 20)"); plt.ylabel("Muestras")
 plt.show()`)}
+<h3>cBioPortal paso a paso: estudio, muestras y datos clínicos</h3>
 ${codeBlock(`import pandas as pd
 
 BASE_URL = "https://www.cbioportal.org"
@@ -1213,29 +1258,44 @@ BASE_URL = "https://www.cbioportal.org"
 async def get_study(study_id):
     response = await web.get(f"{BASE_URL}/api/studies/{study_id}")
     if response.status_code == 200:
-        print("Conexión correcta con cBioPortal")
+        print("✅ Conexión exitosa con cBioPortal")
         return response.json()
-    print(f"Error {response.status_code}: no se pudo obtener el estudio {study_id}")
+    print(f"❌ Error {response.status_code}: no se pudo obtener el estudio {study_id}")
+    return None
 
 study = await get_study("brca_tcga")
-print(f"Descripción: {study.get("description")[:160]}...")
-print(f"Tipo: {study.get("cancerTypeId")}")
-print(f"Nombre: {study.get("cancerType").get("name")}")
+if study:
+    print(f"Descripción: {study.get('description', '')[:160]}...")
+    print(f"Tipo: {study.get('cancerTypeId')}")
+    print(f"Nombre: {study.get('cancerType', {}).get('name')}")
+    print(f"Muestras: {study.get('allSampleCount')}")
 
 samples = (await web.get(f"{BASE_URL}/api/studies/brca_tcga/samples")).json()
-print("Muestras en el estudio:", len(samples))
-print(pd.Series([s.get("sampleType") for s in samples]).value_counts())`)}
-${note("Fíjate en <code>f\"{study.get(\"description\")}\"</code>: comillas dobles dentro de un f-string con comillas dobles. Es válido desde <b>Python 3.12</b> (esta web usa 3.12), pero en 3.11 o anteriores da <code>SyntaxError</code>. Si el script de clase te falla en otro ordenador, este es el motivo: usa comillas simples dentro, <code>f\"{study.get('description')}\"</code>, y funcionará en cualquier versión.")}
-${tip("El script de clase descarga <b>todos</b> los datos clínicos del estudio (decenas de miles de registros de todos los atributos) y después filtra <code>TMB_NONSYNONYMOUS</code> en pandas. Arriba se pide ya filtrado con <code>attributeId=</code>: pide al servidor solo lo que necesitas y la consulta será mucho más rápida y ligera.")}
-${staticCode(`# pip install pybioportal   (cliente de Python para cBioPortal)
+print(len(samples), "muestras. Ejemplo:", samples[0])`)}
+${note("El script usa <code>f\"Descripción: {study.get(\"description\")}\"</code>, con comillas dobles <b>dentro</b> de un f-string de comillas dobles. Solo es válido desde Python 3.12: en Python 3.11 o anterior es un <code>SyntaxError</code>. Para que tu código funcione en cualquier versión, alterna comillas: <code>f\"... {study.get('description')}\"</code>.")}
+${codeBlock(`# Datos clínicos de PACIENTE en formato "ancho" (una fila por paciente), como hace pybioportal
+atributos = ["OS_STATUS", "OS_MONTHS", "RACE"]
+filas = []
+for atributo in atributos:
+    datos = await obtener_json(f"{BASE_URL}/api/studies/brca_tcga/clinical-data"
+                               f"?clinicalDataType=PATIENT&attributeId={atributo}")
+    filas += [{"patientId": d["patientId"], "atributo": d["clinicalAttributeId"], "valor": d["value"]} for d in datos]
+
+largo = pd.DataFrame(filas)
+ancho = largo.pivot(index="patientId", columns="atributo", values="valor")
+ancho["OS_MONTHS"] = pd.to_numeric(ancho["OS_MONTHS"], errors="coerce")
+print(ancho.head())
+print(ancho["OS_STATUS"].value_counts())
+print(ancho.groupby("OS_STATUS")["OS_MONTHS"].median().round(1))`)}
+${concepto("Formato largo y formato ancho", "la API devuelve una fila por <i>dato</i> (paciente, atributo, valor): es el formato <b>largo</b>. Para analizar se suele preferir el <b>ancho</b>, una fila por paciente y una columna por atributo. <code>pivot</code> pasa de largo a ancho y <code>melt</code> hace lo contrario.")}
+${staticCode(`# pip install pybioportal
 from pybioportal import clinical_attributes as ca
 from pybioportal import clinical_data as cd
 
 atributos = ca.fetch_clinical_attributes(study_ids=["brca_tcga", "brca_bccrc"])
-supervivencia = cd.fetch_all_clinical_data_in_study(study_id="brca_tcga",
-                                                    attribute_ids=["OS_STATUS", "OS_MONTHS", "RACE"],
-                                                    clinical_data_type="PATIENT", ret_format="WIDE")
-print(supervivencia.head())`, "Con la librería pybioportal (en tu ordenador)")}
+df = cd.fetch_all_clinical_data_in_study(study_id="brca_tcga", attribute_ids=["OS_STATUS", "OS_MONTHS", "RACE"],
+                                         clinical_data_type="PATIENT", ret_format="WIDE")`, "Lo mismo con la librería pybioportal (en tu ordenador)")}
+${tip("El script de clase descarga <b>todos</b> los datos clínicos del estudio (decenas de miles de registros) y después filtra <code>TMB_NONSYNONYMOUS</code> con pandas. Funciona, pero es mucho más eficiente pedir al servidor solo el atributo que necesitas (<code>attributeId=</code>), como en la celda del histograma.")}
 ${note("Si alguna celda falla con un error de red, usa <code>await probar_apis()</code> (módulo 32) para ver qué servicio no responde desde tu navegador. Sé respetuoso con los servidores: no lances cientos de peticiones seguidas; si haces bucles, añade una pausa (<code>asyncio.sleep(0.3)</code>). NCBI, por ejemplo, limita a 3 peticiones por segundo sin clave de API.")}
 ${origen("BIOPYTHON7_7_Entrez.py y clase_8_repaso/Cbioportal.py")}
 ${resumen(["Entrez: <code>esearch</code> busca identificadores, <code>esummary</code>/<code>efetch</code> dan los detalles; <code>db=</code> elige la base (pubmed, gene, nucleotide, clinvar...).", "Con Biopython: <code>Entrez.email = ...</code> es obligatorio; en el navegador, JSON directo con <code>retmode=json</code>.", "cBioPortal: <code>/api/studies/{id}</code> y <code>/clinical-data</code>; conviértelo en un DataFrame y analízalo.", "Respeta los límites de peticiones de cada servicio."])}
@@ -1423,9 +1483,9 @@ ${resumen(["<code>Chem.MolFromSmarts</code> + <code>GetSubstructMatches</code> /
 ${quiz("Dos moléculas tienen Tanimoto = 0.85. ¿Qué significa?", ["Comparten el 85 % de los átomos", "Comparten una gran proporción de fragmentos estructurales", "Tienen un 85 % de probabilidad de la misma actividad"], 1, "Tanimoto compara bits de la huella (fragmentos). Una similitud alta sugiere actividad parecida, pero no la garantiza (los <i>activity cliffs</i> existen).")}
 </div>`},
 
-{id:38, cat:"Bioinformática", title:"Proyectos finales: análisis completos", body:()=>`
+{id:38, cat:"Bioinformática", title:"Proyectos de repaso: análisis completos", body:()=>`
 <div class="theory">
-<p>Estos proyectos reproducen los ejercicios de repaso del curso, ya corregidos y comentados. Cada uno combina varios módulos: lectura de datos, limpieza, cálculo, visualización y, en algunos casos, modelos o APIs.</p>
+<p>Estos proyectos reproducen los ejercicios de repaso del curso (clase 8), ya corregidos y comentados. Cada uno combina varios módulos: lectura de datos, limpieza, cálculo, visualización y, en algunos casos, modelos o APIs.</p>
 
 <h3>Proyecto A · Exploración del Sistema Solar con pandas</h3>
 ${codeBlock(`import pandas as pd
@@ -1439,6 +1499,12 @@ print("Correlación gravedad-densidad:", round(pl["Gravity"].corr(pl["Density"])
 print("Distancia media al Sol de los que tienen anillos:", pl[pl["Ring System?"] == "Yes"]["Distance from Sun"].mean())
 print(pl.groupby(["Ring System?", "Global Magnetic Field?"]).size())
 print("Más caliente:", pl["Mean Temperature"].idxmax(), "| más frío:", pl["Mean Temperature"].idxmin())`)}
+${codeBlock(`from pandas.plotting import scatter_matrix
+import matplotlib.pyplot as plt
+
+pl.select_dtypes("number").hist(bins=30, figsize=(13, 9), color="tab:blue", edgecolor="black")
+plt.suptitle("Histogramas de las características de los planetas"); plt.tight_layout(); plt.show()
+scatter_matrix(pl[["Gravity", "Mass", "Escape Velocity"]], figsize=(7, 6)); plt.show()`)}
 ${origen("clase_8_repaso/Script3.py")}
 
 <h3>Proyecto B · Predicción del precio de viviendas (regresión lineal)</h3>
@@ -1522,139 +1588,116 @@ writer.close()
 print("Moléculas guardadas:", len(Chem.SDMolSupplier("heteromoleculas.sdf")))`)}
 ${origen("clase_9/rdkit_8_act2.py, Script8.py y heteromoleculas.xlsx")}
 
-<h3>Proyecto E · De estructuras del PDB a fichas de UniProt y PubChem</h3>
-<p>Un pipeline completo de consulta a bases de datos: partimos de identificadores del PDB, los traducimos a UniProt, construimos una tabla con la información de cada proteína y consultamos en PubChem los cofactores metálicos. <b>Requiere conexión.</b></p>
+<h3>Proyecto E · De estructuras a proteínas y cofactores</h3>
+<p>El Script1 del repaso encadena tres bases de datos: descarga estructuras del PDB, traduce sus IDs a UniProt y enriquece la tabla con información de la proteína y de un cofactor (el zinc de p53) en PubChem. <b>Requiere conexión.</b></p>
 ${codeBlock(`import asyncio
 import pandas as pd
 
-pdb_ids = ["1TUP", "2OCJ", "1A3N", "XXXX"]           # el último no existe: el pipeline debe sobrevivir
+pdb_ids = ["1TUP", "4OGQ", "2XYZ", "1A3N"]          # 2XYZ: veremos qué pasa con un ID que no mapea
 
 async def obtener_uniprot_id_desde_pdb(pdb_id):
     r = await web.post("https://rest.uniprot.org/idmapping/run", data={"from": "PDB", "to": "UniProtKB", "ids": pdb_id})
     if r.status_code != 200:
-        print(f"No se pudo lanzar el mapeo de {pdb_id}"); return None
-    job_id = r.json()["jobId"]
+        return None
+    job = r.json()["jobId"]
     for _ in range(10):
-        datos = (await web.get(f"https://rest.uniprot.org/idmapping/status/{job_id}")).json()
-        if datos.get("jobStatus") in ("NEW", "RUNNING"):
-            await asyncio.sleep(2); continue
-        break
+        datos = (await web.get(f"https://rest.uniprot.org/idmapping/status/{job}")).json()
+        if datos.get("jobStatus") not in ("NEW", "RUNNING"):
+            break
+        await asyncio.sleep(2)
     if "results" not in datos:
-        datos = (await web.get(f"https://rest.uniprot.org/idmapping/results/{job_id}")).json()
+        datos = (await web.get(f"https://rest.uniprot.org/idmapping/results/{job}")).json()
     resultados = datos.get("results", [])
     if not resultados:
-        print(f"No se encontraron resultados para el PDB ID {pdb_id}."); return None
+        print(f"No se encontraron resultados para el PDB ID {pdb_id}.")
+        return None
     destino = resultados[0]["to"]
-    uniprot_id = destino["primaryAccession"] if isinstance(destino, dict) else destino
-    print(f"{pdb_id} -> {uniprot_id}")
-    return uniprot_id
+    return destino["primaryAccession"] if isinstance(destino, dict) else destino
 
-uniprot_ids = [await obtener_uniprot_id_desde_pdb(i) for i in pdb_ids]
-df = pd.DataFrame({"pdb_ids": pdb_ids, "uniprot_ids": uniprot_ids}).dropna().reset_index(drop=True)
+uniprot_ids = [await obtener_uniprot_id_desde_pdb(p) for p in pdb_ids]
+df = pd.DataFrame({"pdb_ids": pdb_ids, "uniprot_ids": uniprot_ids}).dropna()
 print(df)`)}
 ${codeBlock(`async def obtener_informacion_uniprot(uniprot_id):
     r = await web.get(f"https://rest.uniprot.org/uniprotkb/{uniprot_id}.json")
     if r.status_code != 200:
-        print(f"No se pudo obtener la información de UniProt para el ID {uniprot_id}.")
-        return {}
+        return pd.Series(dtype=object)           # una fila vacía en vez de None: no rompe la tabla
     d = r.json()
     desc = d["proteinDescription"]
-    gen = (d.get("genes") or [{}])[0]
-    tipo = d["entryType"]                                    # p. ej. "UniProtKB reviewed (Swiss-Prot)"
-    return {"fecha_publicacion": d["entryAudit"]["firstPublicDate"],
-            "fecha_modificacion": d["entryAudit"]["lastAnnotationUpdateDate"],
-            "revisado": "TrEMBL" if "unreviewed" in tipo.lower() else "Swiss-Prot",
-            "nombre_gen": gen.get("geneName", {}).get("value"),
-            "sinonimos": ", ".join(x["value"] for x in gen.get("synonyms", [])),
-            "organismo": d["organism"]["scientificName"],
-            "nombre_proteina": (desc.get("recommendedName") or (desc.get("submissionNames") or [{}])[0]).get("fullName", {}).get("value"),
-            "longitud": d["sequence"]["length"],
-            "n_estructuras_pdb": sum(1 for ref in d.get("uniProtKBCrossReferences", []) if ref["database"] == "PDB")}
+    gen = d.get("genes", [{}])[0]
+    return pd.Series({
+        "fecha_publicacion": d["entryAudit"]["firstPublicDate"],
+        "fecha_modificacion": d["entryAudit"]["lastAnnotationUpdateDate"],
+        "revisado": "Swiss-Prot" if "unreviewed" not in d["entryType"] else "TrEMBL",
+        "nombre_gen": gen.get("geneName", {}).get("value"),
+        "sinonimos": ", ".join(s["value"] for s in gen.get("synonyms", [])),
+        "organismo": d["organism"]["scientificName"],
+        "nombre_proteina": (desc.get("recommendedName") or desc.get("submissionNames", [{}])[0]).get("fullName", {}).get("value"),
+        "longitud": d["sequence"]["length"],
+        "n_estructuras_pdb": sum(1 for ref in d.get("uniProtKBCrossReferences", []) if ref["database"] == "PDB"),
+    })
 
-fichas = [await obtener_informacion_uniprot(u) for u in df["uniprot_ids"]]
-df = pd.concat([df, pd.DataFrame(fichas)], axis=1)
-print(df.drop(columns=["fecha_modificacion"]).to_string(index=False))`)}
-${warn("en <code>Script1.py</code> la línea <code>revisado = 'Swiss-Prot' if datos['entryType'] else 'Trembl'</code> da <b>siempre</b> 'Swiss-Prot': <code>entryType</code> es un texto no vacío, y un texto no vacío es verdadero en un <code>if</code>. Hay que mirar su contenido. Ojo también al orden: 'unreviewed' contiene 'reviewed', así que se comprueba primero la palabra más larga. Por último, el script lanza el pipeline con IDs inventados (<code>2xyz</code>, <code>10yza</code>...) y depende de que cada función devuelva <code>None</code> sin romperse: es justo lo que hay que probar.")}
-${codeBlock(`import urllib.parse
-
+info = pd.DataFrame([await obtener_informacion_uniprot(u) for u in df["uniprot_ids"]], index=df.index)
+df = pd.concat([df, info], axis=1)
+print(df.T)`)}
+${warn("en el script, <code>revisado = 'Swiss-Prot' if datos['entryType'] else 'Trembl'</code> marca <b>todas</b> las proteínas como Swiss-Prot: <code>entryType</code> siempre es un texto no vacío (por ejemplo 'UniProtKB unreviewed (TrEMBL)') y un texto no vacío es <code>True</code>. Hay que mirar su contenido. Además, si la consulta falla, la función devolvía <code>None</code> y la asignación a varias columnas del DataFrame se rompía; devolver una <code>Series</code> vacía mantiene la tabla.")}
+${codeBlock(`# El cofactor: zinc(2+) en PubChem, extrayendo propiedades del JSON completo
 async def obtener_informacion_pubchem(nombre):
-    r = await web.get(f"https://pubchem.ncbi.nlm.nih.gov/rest/pug/compound/name/{urllib.parse.quote(nombre, safe='')}/JSON")
-    if r.status_code != 200:
-        print(f"Error al consultar PubChem para {nombre}: {r.status_code}")
-        return {"Nombre": nombre}
-    comp = r.json()["PC_Compounds"][0]
-    info = {"Nombre": nombre, "CID": comp["id"]["id"]["cid"], "IUPAC": [], "InChIKey": "", "InChI": "", "Peso": None, "SMILES": ""}
+    datos = await obtener_json(f"https://pubchem.ncbi.nlm.nih.gov/rest/pug/compound/name/{nombre}/JSON")
+    comp = datos["PC_Compounds"][0]
+    fila = {"Nombre": nombre, "CID": comp["id"]["id"]["cid"], "IUPAC Name": []}
     for prop in comp["props"]:
         etiqueta, valor = prop["urn"]["label"], prop["value"].get("sval")
         if etiqueta == "IUPAC Name":
-            info["IUPAC"].append((valor, prop["urn"].get("name")))
-        elif etiqueta == "InChIKey":
-            info["InChIKey"] = valor
-        elif etiqueta == "InChI":
-            info["InChI"] = valor
-        elif etiqueta == "Molecular Weight":
-            info["Peso"] = valor
-        elif etiqueta == "SMILES":
-            info["SMILES"] = valor
-    return info
+            fila["IUPAC Name"].append((valor, prop["urn"].get("name")))
+        elif etiqueta in ("InChIKey", "InChI", "Molecular Weight", "SMILES"):
+            fila[etiqueta] = valor
+    return fila
 
-cofactores = pd.DataFrame([await obtener_informacion_pubchem(c) for c in ["zinc(2+)", "magnesium(2+)", "iron(2+)"]])
-print(cofactores[["Nombre", "CID", "Peso", "InChIKey", "SMILES"]].to_string(index=False))`)}
-${note("El script original declara <code>global datos</code> dentro de la función para poder inspeccionar la respuesta después. Funciona, pero hace que la función dependa de (y modifique) una variable de fuera, una fuente clásica de errores difíciles de rastrear. Si necesitas la respuesta, devuélvela con <code>return</code>.")}
+df_cofactor = pd.DataFrame([await obtener_informacion_pubchem("zinc(2+)")])
+print(df_cofactor.T)`)}
 ${origen("clase_8_repaso/Script1.py")}
-
-<h3>Proyecto F · Proteínas relacionadas con la neurodegeneración</h3>
-<p>Una búsqueda en UniProt devuelve hasta 500 proteínas; con Biopython calculamos sus propiedades y comparamos humano y ratón. <b>Requiere conexión.</b></p>
+<h3>Proyecto F · Proteínas asociadas a neurodegeneración</h3>
+<p>El Script2 busca en UniProt 500 proteínas relacionadas con 'neurodegeneration', calcula su punto isoeléctrico y su peso con Biopython y compara humano y ratón. <b>Requiere conexión.</b></p>
 ${codeBlock(`import pandas as pd
 
 params = {"query": "neurodegeneration", "format": "json", "size": 500,
-          "fields": "accession,id,protein_name,organism_name,sequence"}      # solo los campos que usamos
-response = await web.get("https://rest.uniprot.org/uniprotkb/search", params=params)
-
+          "fields": "accession,id,protein_name,organism_name,sequence"}       # solo los campos necesarios
+r = await web.get("https://rest.uniprot.org/uniprotkb/search", params=params)
+print("Estado:", r.status_code)
 filas = []
-if response.status_code == 200:
-    for protein in response.json()["results"]:
-        desc = protein.get("proteinDescription", {})
-        nombre = (desc.get("recommendedName") or (desc.get("submissionNames") or [{}])[0]).get("fullName", {}).get("value", "")
-        seq = protein["sequence"]["value"]
-        filas.append({"Uniprot_id": protein["uniProtkbId"], "Uniprot_name": nombre, "Uniprot_seq": seq,
-                      "Uniprot_lenseq": len(seq), "Uniprot_Organism": protein["organism"]["scientificName"]})
-else:
-    print(f"Error al obtener la información de la proteína: {response.status_code}")
-
-df = pd.DataFrame(filas)
-print(df.shape)
-print(df["Uniprot_Organism"].value_counts().head(6))`)}
-${tip("Con <code>fields=</code> UniProt devuelve solo las columnas pedidas. Para 500 proteínas, la respuesta completa pesa varios megas (anotaciones, referencias, características...); con 5 campos, una fracción. Es la diferencia entre una consulta que tarda un segundo y otra que tarda un minuto.")}
-${codeBlock(`import numpy as np
-from Bio.SeqUtils.IsoelectricPoint import IsoelectricPoint as IP
+for protein in r.json()["results"]:
+    desc = protein.get("proteinDescription", {})
+    nombre = (desc.get("recommendedName") or (desc.get("submissionNames") or [{}])[0]).get("fullName", {}).get("value", "")
+    filas.append({"Uniprot_id": protein["uniProtkbId"], "Uniprot_name": nombre,
+                  "Uniprot_seq": protein["sequence"]["value"], "Uniprot_lenseq": protein["sequence"]["length"],
+                  "Uniprot_Organism": protein["organism"]["scientificName"]})
+prot = pd.DataFrame(filas)
+print(prot.shape)
+print(prot["Uniprot_Organism"].value_counts().head(5))`)}
+${tip("Con <code>fields=</code> UniProt devuelve solo las columnas que pides. Para 500 proteínas, la diferencia entre la entrada completa (con anotaciones, referencias cruzadas...) y lo imprescindible es de muchos megabytes.")}
+${codeBlock(`from Bio.SeqUtils.IsoelectricPoint import IsoelectricPoint as IP
 from Bio.SeqUtils import molecular_weight
-
-def peso_seguro(secuencia):
-    try:
-        return molecular_weight(secuencia, "protein")
-    except ValueError:                       # letras como X (desconocido) o U (selenocisteína)
-        return np.nan
-
-df["Isoelectric_point"] = df["Uniprot_seq"].apply(lambda x: IP(x).pi())
-df["Molecular_weight"] = df["Uniprot_seq"].apply(peso_seguro)
-print("Proteínas sin peso calculable:", df["Molecular_weight"].isna().sum())
-print(df[["Uniprot_lenseq", "Isoelectric_point", "Molecular_weight"]].corr().round(3))`)}
-${warn("en <code>Script2.py</code>, <code>molecular_weight(x, 'protein')</code> se aplica a todas las secuencias sin protección. Basta una proteína con una <code>X</code> o una <code>U</code> para que lance <code>ValueError</code> y se pierda todo el cálculo. Con datos reales, envuelve los cálculos que pueden fallar en <code>try/except</code> y cuenta cuántos casos has descartado.")}
-${codeBlock(`import matplotlib.pyplot as plt
 from pandas.plotting import scatter_matrix
+import matplotlib.pyplot as plt
 
+estandar = set("ACDEFGHIKLMNPQRSTVWY")
+validas = prot["Uniprot_seq"].apply(lambda s: set(s) <= estandar)
+print("Secuencias con letras no estándar (X, U, B...):", (~validas).sum())
+prot = prot[validas].copy()
+
+prot["Isoelectric_point"] = prot["Uniprot_seq"].apply(lambda s: IP(s).pi())
+prot["Molecular_weight"] = prot["Uniprot_seq"].apply(lambda s: molecular_weight(s, "protein"))
 variables = ["Uniprot_lenseq", "Isoelectric_point", "Molecular_weight"]
-scatter_matrix(df[variables], figsize=(8, 6))
-plt.show()
+print(prot[variables].corr().round(3))
+scatter_matrix(prot[variables], figsize=(8, 7), alpha=0.5); plt.show()
 
-fig, axs = plt.subplots(1, 2, figsize=(11, 3.6))
-for ax, (organismo, color) in zip(axs, [("Homo sapiens", "tab:blue"), ("Mus musculus", "tab:red")]):
-    sub = df[df["Uniprot_Organism"] == organismo]
+fig, axs = plt.subplots(1, 2, figsize=(11, 3.8), sharey=True)
+for ax, especie, color in zip(axs, ["Homo sapiens", "Mus musculus"], ["tab:blue", "tab:red"]):
+    sub = prot[prot["Uniprot_Organism"] == especie]
     ax.hist(sub["Isoelectric_point"], bins=25, color=color, edgecolor="black")
-    ax.set_title(f"{organismo}: punto isoeléctrico (n = {len(sub)})"); ax.set_xlabel("pI")
+    ax.set_title(f"{especie} (n={len(sub)}): punto isoeléctrico"); ax.set_xlabel("pI")
 plt.tight_layout(); plt.show()`)}
-${concepto("Una correlación esperada", "la longitud y el peso molecular correlacionan casi perfectamente (r ≈ 1): cada aminoácido pesa de media unos 110 Da. Cuando dos variables miden prácticamente lo mismo, no aportan información distinta a un modelo; detectarlo con <code>corr()</code> o <code>scatter_matrix</code> es parte del análisis exploratorio.")}
+${warn("<code>molecular_weight</code> lanza <code>ValueError</code> si la secuencia contiene letras ambiguas o no estándar, como X (desconocido) o U (selenocisteína), que aparecen en algunas entradas de UniProt. El script original aplicaba la función a todas y podía romperse según qué devolviera la búsqueda. Filtrar o capturar la excepción hace el análisis robusto. Y fíjate en la correlación de casi 1 entre longitud y peso: son la misma información, y en un modelo bastaría con una de las dos.")}
 ${origen("clase_8_repaso/Script2.py")}
 <h3>Proyecto D · Tu propio mini-pipeline</h3>
 ${exercise("Informe de una proteína", "Combina lo aprendido: a partir de <code>P04637.fasta</code> crea un diccionario <code>informe</code> con las claves <code>'id'</code> (el identificador del registro), <code>'longitud'</code>, <code>'peso_kda'</code> (peso molecular en kDa redondeado a 1 decimal), <code>'pI'</code> (punto isoeléctrico redondeado a 2 decimales) y <code>'top3'</code> (lista con los 3 aminoácidos más frecuentes).",
@@ -1682,7 +1725,7 @@ informe = {
     "top3": [aa for aa, _ in sorted(pa.count_amino_acids().items(), key=lambda x: -x[1])[:3]],
 }
 print(informe)`)}
-${note("Con esto cierras el bloque de bioinformática. El último bloque del curso, <b>aprendizaje automático</b> (módulos 39-43), usa todo lo anterior para entrenar modelos que predicen, clasifican y agrupan.")}
+${note("🎉 Has completado todo el temario. Ideas para seguir: automatiza un informe de calidad de tus propias lecturas FASTQ, construye una pequeña base de datos de ligandos de tus proteínas favoritas o publica tus análisis como notebooks en GitHub.")}
 ${resumen(["Un análisis completo: cargar → limpiar → explorar → modelar/calcular → visualizar → guardar.", "En ML, separa entrenamiento y test antes de ajustar cualquier transformación.", "Las APIs permiten enriquecer tus datos con información de bases públicas.", "Escribe funciones pequeñas y comprobables: es lo que hace que un script se convierta en un pipeline."])}
 </div>`}
 );
