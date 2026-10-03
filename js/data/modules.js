@@ -64,12 +64,15 @@ function exerciseLocal(title, prompt, starter, solution, test=null, solCode=null
 function noNavegador(nb){
   return `<aside class="callout c-note"><span class="callout-k">RDKit se ejecuta fuera del navegador</span>No existe una versión de RDKit para Python compilada para la web (ni siquiera en Pyodide), así que en este módulo el código se muestra para ejecutarlo en <b>Google Colab</b> o en tu ordenador. Abre <code>notebooks/${nb}</code> (viene en la carpeta del curso) en <a href="https://colab.research.google.com" target="_blank" rel="noopener">colab.research.google.com</a> con <i>Archivo → Subir cuaderno</i>: incluye la instalación, los archivos de datos y la comprobación de cada ejercicio.</aside>`;
 }
+/* TOOLS_REC se activa al construir las herramientas de estudio (mapa, apuntes, glosario, test): recoge resúmenes, conceptos, errores y preguntas */
+let TOOLS_REC = null;
+function _tool(item){ if(TOOLS_REC) TOOLS_REC.push(item); }
 function _callout(cls, k, html){ return `<aside class="callout ${cls}"><span class="callout-k">${k}</span>${html}</aside>`; }
 function tip(html){ return _callout('c-tip', 'Consejo', _cap(html)); }
-function warn(html){ return _callout('c-warn', 'Error habitual', _cap(html)); }
+function warn(html){ _tool({tipo:'warn', html:_cap(html)}); return _callout('c-warn', 'Error habitual', _cap(html)); }
 function note(html){ return _callout('c-note', 'Nota', _cap(html)); }
-function concepto(titulo, html){ return _callout('c-concept', _cap(titulo), _cap(html)); }
-function resumen(items){ return `<section class="summary"><h4>${ICON.list}Resumen del módulo</h4><ul>${items.map(i=>`<li>${i}</li>`).join('')}</ul></section>`; }
+function concepto(titulo, html){ _tool({tipo:'concepto', titulo:_cap(titulo), html:_cap(html)}); return _callout('c-concept', _cap(titulo), _cap(html)); }
+function resumen(items){ _tool({tipo:'resumen', items}); return `<section class="summary"><h4>${ICON.list}Resumen del módulo</h4><ul>${items.map(i=>`<li>${i}</li>`).join('')}</ul></section>`; }
 function origen(txt){
   const partes = txt.split(/,\s*|\s+y\s+/).map(p => p.trim()).filter(Boolean);
   return `<div class="origin">${ICON.file}Basado en ${partes.map(p => `<span>${p}</span>`).join(' ')}</div>`;
@@ -89,6 +92,7 @@ function exercise(title, prompt, starter, solution, test=null, solCode=null){
 /* Pregunta tipo test con corrección inmediata */
 let quizCounter = 0;
 function quiz(pregunta, opciones, correcta, explicacion){
+  _tool({tipo:'quiz', pregunta, opciones, correcta, explicacion});
   const q = 'q'+(quizCounter++);
   return `<div class="quiz" id="${q}"><div class="quiz-q"><span class="quiz-k">?</span><span>${pregunta}</span></div>
     <ol class="quiz-opts">${opciones.map((o,i)=>`<li><button class="quiz-opt" onclick="answerQuiz('${q}',${i},${correcta})"><kbd>${'abcd'[i]}</kbd><span>${o}</span></button></li>`).join('')}</ol>
@@ -98,6 +102,7 @@ function answerQuiz(q, i, ok){
   const box = document.getElementById(q), btns = box.querySelectorAll('.quiz-opt'), exp = box.querySelector('.quiz-exp');
   btns.forEach((b,j)=>{ b.disabled = true; if(j===ok) b.classList.add('right'); else if(j===i) b.classList.add('wrong'); });
   exp.innerHTML = (i===ok ? '<b class="ok">Correcto.</b> ' : '<b class="ko">No exactamente.</b> ') + exp.dataset.exp;
+  if(typeof window.__alResponder === 'function') window.__alResponder(i === ok);
 }
 
 const MODULES = [

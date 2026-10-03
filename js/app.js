@@ -59,7 +59,7 @@ function renderNav(){
       <button class="folder-head" onclick="toggleFolder('${cat}')" aria-expanded="${!cerrada}">
         <svg class="chev" viewBox="0 0 12 12" aria-hidden="true"><path d="m3 4.5 3 3 3-3"/></svg><span class="swatch"></span>${cat}<span class="fcount">${hechos}/${todos.length}</span>
       </button>
-      <ul class="files">${mods.map(m => `<li><button class="file ${m.id === currentId ? 'active' : ''}" onclick="goTo(${m.id})" ${m.id === currentId ? 'aria-current="page"' : ''} title="${fileName(m)}">
+      <ul class="files">${q ? '' : `<li><button class="file blkrow ${currentId === 'b:' + cat ? 'active' : ''}" onclick="goTo('b:${cat}')"><span class="num"><svg viewBox="0 0 16 16" aria-hidden="true"><circle cx="8" cy="8" r="2.2"/><circle cx="3" cy="3.5" r="1.4"/><circle cx="13" cy="3.5" r="1.4"/><circle cx="3" cy="12.5" r="1.4"/><circle cx="13" cy="12.5" r="1.4"/><path d="M6.2 6.8 4.2 4.6M9.8 6.8l2-2.2M6.2 9.2l-2 2.2M9.8 9.2l2 2.2"/></svg></span><span class="ftitle">Mapa, apuntes y test</span></button></li>`}${mods.map(m => `<li><button class="file ${m.id === currentId ? 'active' : ''}" onclick="goTo(${m.id})" ${m.id === currentId ? 'aria-current="page"' : ''} title="${fileName(m)}">
         <span class="num">${String(m.id).padStart(2, '0')}</span><span class="ftitle">${m.title}</span><span class="state ${p[m.id] ? 'done' : ''}" aria-label="${p[m.id] ? 'completado' : 'pendiente'}"></span></button></li>`).join('')}</ul>
     </div>`;
   }
@@ -74,13 +74,14 @@ function renderChrome(){
   let dir, file;
   if(currentId === 0){ dir = null; file = 'README.md'; }
   else if(currentId === 'cert'){ dir = null; file = 'certificado.txt'; }
+  else if(esBloque(currentId)){ dir = CAT_INFO[currentId.slice(2)].dir; file = 'README.md'; }
   else{ const m = modulo(currentId); dir = CAT_INFO[m.cat].dir; file = fileName(m); }
   $('crumbs').innerHTML = `<span class="sep">/</span>${dir ? `<span>${dir}</span><span class="sep">/</span>` : ''}<span class="here">${file}</span>`;
   const icono = file.endsWith('.py')
     ? '<svg viewBox="0 0 16 16" aria-hidden="true"><path d="M8 1.8c-3 0-3 1.3-3 2.3v1.6h3.1v.6H3.8C2.5 6.3 1.5 7.4 1.5 9.6s1 3 2.3 3h1v-1.7c0-1.3 1-2.3 2.3-2.3h3.1c1 0 1.8-.8 1.8-1.8V4.1c0-1-.9-2.3-4-2.3z"/><path d="M8 14.2c3 0 3-1.3 3-2.3v-1.6H7.9v-.6h4.3c1.3 0 2.3-1.1 2.3-3.3s-1-3-2.3-3h-1v1.7c0 1.3-1 2.3-2.3 2.3H5.8c-1 0-1.8.8-1.8 1.8v2.7c0 1 .9 2.3 4 2.3z"/></svg>'
     : '<svg viewBox="0 0 16 16" aria-hidden="true"><path d="M4 1.5h5.5L13 5v9.5H4z"/><path d="M9.5 1.5V5H13"/></svg>';
   $('tabs').innerHTML = `<div class="tab" role="tab" aria-selected="true">${icono}${file}</div>`;
-  document.title = (currentId === 0 ? 'Aprende Python' : (currentId === 'cert' ? 'Certificado' : modulo(currentId).title)) + ' · aprende-python';
+  document.title = (currentId === 0 ? 'Aprende Python' : currentId === 'cert' ? 'Certificado' : esBloque(currentId) ? 'Bloque ' + currentId.slice(2) : modulo(currentId).title) + ' · aprende-python';
 }
 
 /* ---------- Portada ---------- */
@@ -115,46 +116,6 @@ function cromatograma(seq, prot){
   return `<svg viewBox="0 0 ${width} ${base + 38}" role="img" aria-label="Cromatograma ilustrativo de los primeros codones de TP53 y su traducción a proteína">
     <line class="base" x1="0" x2="${width}" y1="${base}" y2="${base}"/>${trazas}${llamadas}${codones}</svg>`;
 }
-function renderWelcome(){
-  const total = MODULES.length, hechos = countDone(), p = getProgress();
-  const ultimo = parseInt(localStorage.getItem(LAST_KEY)) || 1;
-  const filas = CATS.map(cat => {
-    const mods = MODULES.filter(m => m.cat === cat), h = mods.filter(m => p[m.id]).length;
-    const destino = (mods.find(m => !p[m.id]) || mods[0]).id;
-    return `<button class="block-row" style="--cat:${CAT_INFO[cat].color}" onclick="goTo(${destino})">
-      <span class="sw"></span><span class="bt">${cat}</span>
-      <span class="bp"><span>${mods[0].id}–${mods[mods.length - 1].id}</span><span class="mini-bar"><i style="width:${h / mods.length * 100}%"></i></span><span>${h}/${mods.length}</span></span>
-      <span class="bd">${CAT_INFO[cat].desc}</span></button>`;
-  }).join('');
-  const archivos = Object.keys(DATASETS).map(f => `<code>${f}</code>`).join('');
-  $('main').innerHTML = `
-  <section class="hero">
-    <div class="chromo">
-      <div class="chromo-head"><span>TP53, primeros 18 codones</span>
-        <span class="chromo-legend"><span><i style="background:var(--a)"></i>A</span><span><i style="background:var(--c)"></i>C</span><span><i style="background:var(--g)"></i>G</span><span><i style="background:var(--t)"></i>T</span></span></div>
-      <div class="chromo-scroll">${cromatograma(TP53_CDS, TP53_AA)}</div>
-    </div>
-    <p class="chromo-cap">Cromatograma ilustrativo sobre la secuencia real del inicio de TP53 y su traducción, el comienzo de la proteína p53 (UniProt P04637). En el bloque de bioinformática harás esto mismo con Biopython.</p>
-    <h1>Python, de la primera línea al primer genoma</h1>
-    <p class="lede">${total} módulos con código que se ejecuta en tu navegador: fundamentos del lenguaje, ciencia de datos, bioinformática con secuencias, estructuras y bases de datos reales, machine learning y deep learning. No hace falta instalar nada.</p>
-    <div class="hero-actions">
-      <button class="btn-primary" onclick="goTo(${hechos > 0 ? ultimo : 1})">${hechos > 0 ? `Continuar en el módulo ${ultimo}` : 'Empezar por el módulo 1'}</button>
-      <button class="btn-secondary" onclick="openPalette()">Buscar un módulo <kbd>Ctrl K</kbd></button>
-    </div>
-  </section>
-  <h2 class="section-h">Bloques del curso <small>${hechos} de ${total} módulos completados</small></h2>
-  <div class="blocks">${filas}</div>
-  <h2 class="section-h">Cómo se trabaja aquí</h2>
-  <div class="howto">
-    <div><b>Ejecuta y experimenta</b>Cada bloque de código es editable. <kbd>Ctrl Enter</kbd> lo ejecuta. Las celdas comparten memoria, como en Jupyter: ejecútalas en orden.</div>
-    <div><b>Ejercicios que se corrigen solos</b>Escribe tu solución y pulsa Comprobar. Si falla, te dice qué no cuadra; la solución explicada está debajo.</div>
-    <div><b>Tu progreso se queda aquí</b>Se guarda en este navegador. Para cambiar de equipo, usa Exportar e Importar al pie del explorador.</div>
-    <div><b>Internet y Colab</b>Python se descarga la primera vez. Las celdas de APIs consultan bases de datos reales; RDKit se trabaja en los cuadernos de Colab de <code>notebooks/</code>.</div>
-  </div>
-  <h2 class="section-h">Archivos de datos incluidos <small>disponibles en el disco virtual de Python</small></h2>
-  <div class="files-list">${archivos}</div>`;
-}
-
 /* ---------- Módulo ---------- */
 function renderModule(){
   const m = modulo(currentId), p = getProgress(), done = !!p[m.id];
@@ -170,8 +131,12 @@ function renderModule(){
         ${nEj ? `<span class="m"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="m3 8.5 3 3 7-7"/></svg>${nEj} ${nEj === 1 ? 'ejercicio' : 'ejercicios'}</span>` : ''}
       </div>
       <h1 class="mod-title">${m.title}</h1>
+      ${MAPAS[m.id] ? `<div class="ideas"><span class="ideas-k">En este módulo</span><div class="chips">${MAPAS[m.id].map(i => `<span>${escTxt(i)}</span>`).join('')}</div></div>` : ''}
+      <div class="head-actions">
       <button class="done-toggle ${done ? 'done' : ''}" onclick="toggleDone(${m.id})" aria-pressed="${done}">
         <span class="box"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="m3 8.5 3 3 7-7"/></svg></span>${done ? 'Módulo completado' : 'Marcar como completado'}</button>
+      <button class="link-btn" onclick="tabBloque='mapa';goTo('b:${m.cat}')">Mapa y apuntes del bloque</button>
+      </div>
     </header>
     ${cuerpo}
     <nav class="navfoot" aria-label="Módulos anterior y siguiente">
@@ -210,6 +175,7 @@ function saveNameAndPrint(){
 function renderMain(){
   if(currentId === 0) renderWelcome();
   else if(currentId === 'cert') renderCert();
+  else if(esBloque(currentId)) renderBlock();
   else renderModule();
   renderChrome();
   const main = $('main'); main.classList.remove('enter'); void main.offsetWidth; main.classList.add('enter');
@@ -229,6 +195,7 @@ function toggleDone(id){
   if(b){ b.classList.toggle('done', nuevo); b.setAttribute('aria-pressed', nuevo); b.lastChild.textContent = nuevo ? 'Módulo completado' : 'Marcar como completado'; }
 }
 function vecino(delta){
+  if(esBloque(currentId)){ const k = CATS.indexOf(currentId.slice(2)) + delta; if(k >= 0 && k < CATS.length) goTo('b:' + CATS[k]); return; }
   if(currentId === 'cert'){ if(delta < 0) goTo(MODULES.length); return; }
   const n = currentId + delta;
   if(n === MODULES.length + 1) goTo('cert'); else if(n >= 0 && n <= MODULES.length) goTo(n);
@@ -253,9 +220,10 @@ const ALIAS = {keras: 'keras', tensorflow: 'keras', pytorch: 'pytorch', torch: '
   smiles: 'rdkit', farmacos: 'rdkit', json: 'apis', errores: 'excepciones', try: 'excepciones', listas: 'colecciones', diccionarios: 'colecciones'};
 function filtrarPaleta(){
   const bruto = norm($('palInput').value.trim()), q = ALIAS[bruto] || bruto;
-  const extra = [{id: 0, title: 'Portada', cat: null}, {id: 'cert', title: 'Certificado', cat: null}];
-  if(!q){ palItems = [extra[0], ...MODULES, extra[1]]; palSel = 0; pintarPaleta(); return; }
-  const enTitulo = [...extra, ...MODULES].filter(m => norm(`${m.id} ${m.title} ${m.cat || ''} ${m.cat ? fileName(m) : ''}`).includes(q));
+  const bloques = CATS.map((c, i) => ({id: 'b:' + c, title: `Bloque ${i + 1}: ${c} (mapa, apuntes y test)`, cat: c}));
+  const extra = [{id: 0, title: 'Portada', cat: null}, {id: 'cert', title: 'Certificado', cat: null}, ...bloques];
+  if(!q){ palItems = [extra[0], ...bloques, ...MODULES, extra[1]]; palSel = 0; pintarPaleta(); return; }
+  const enTitulo = [...extra, ...MODULES].filter(m => norm(`${m.id} ${m.title} ${m.cat || ''} ${typeof m.id === 'number' && m.id > 0 ? fileName(m) : ''}`).includes(q));
   const idx = indice();
   const enTexto = MODULES.filter(m => !enTitulo.includes(m) && idx[m.id].includes(q)).map(m => Object.assign({}, m, {_contenido: true}));
   palItems = [...enTitulo, ...enTexto].slice(0, 40);
@@ -263,7 +231,7 @@ function filtrarPaleta(){
 }
 function pintarPaleta(){
   $('palList').innerHTML = palItems.length ? palItems.map((m, i) => `<li role="option" class="${i === palSel ? 'sel' : ''}" aria-selected="${i === palSel}" onmousemove="palSel=${i};pintarPaleta()" onclick="irPaleta(${i})">
-      <span class="pn">${typeof m.id === 'number' && m.id > 0 ? String(m.id).padStart(2, '0') : '·'}</span><span class="pt">${m.title}</span>
+      <span class="pn">${typeof m.id === 'number' && m.id > 0 ? String(m.id).padStart(2, '0') : esBloque(m.id) ? 'B' + (CATS.indexOf(m.cat) + 1) : '·'}</span><span class="pt">${m.title}</span>
       ${m._contenido ? '<span class="pc-txt">en el contenido</span>' : ''}${m.cat ? `<span class="pc" style="--cat:${CAT_INFO[m.cat].color}">${m.cat}</span>` : ''}</li>`).join('')
     : '<li class="empty">Ningún módulo coincide. Prueba con otra palabra, por ejemplo «bucles» o «PDB».</li>';
   const sel = $('palList').querySelector('.sel'); if(sel) sel.scrollIntoView({block: 'nearest'});
@@ -320,8 +288,7 @@ document.addEventListener('keydown', e => {
 (function(){
   initTheme();
   initPyodide();
-  const last = parseInt(localStorage.getItem(LAST_KEY));
-  currentId = (last && modulo(last)) ? last : 0;
+  currentId = 0;                     // siempre se empieza en la portada; "Continuar" lleva al último módulo
   $('searchBox').addEventListener('input', renderNav);
   $('exportBtn').addEventListener('click', exportProgress);
   $('importInput').addEventListener('change', e => e.target.files[0] && importProgress(e.target.files[0]));

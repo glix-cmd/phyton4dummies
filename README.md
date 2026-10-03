@@ -1,4 +1,4 @@
-# Aprende Python desde cero — v2.7
+# Aprende Python desde cero — v2.8
 
 Curso interactivo de **49 módulos** que va desde el primer `print()` hasta el análisis de secuencias, estructuras de proteínas y fármacos. Python se ejecuta de verdad en el navegador gracias a [Pyodide](https://pyodide.org): NumPy, pandas, SciPy, Matplotlib, Seaborn, Biopython y scikit-learn sin instalar nada, incluido un bloque completo de machine learning. TensorFlow/Keras y PyTorch no existen para el navegador: el bloque de deep learning hace en la web todo lo posible (incluido usar el modelo convolucional entrenado en clase) y trae cuadernos de Colab con el código de Keras y PyTorch. **Excepción: RDKit** (módulos 36, 37 y el Proyecto C del 38) no existe para el navegador; para esos módulos hay cuadernos de Colab en `notebooks/`.
 
@@ -17,6 +17,15 @@ Curso interactivo de **49 módulos** que va desde el primer `print()` hasta el a
 | 🧬 Bioinformática | 28 Biopython: Seq y SeqUtils · 29 FASTA/FASTQ · 30 Alineamientos · 31 Estructuras PDB/mmCIF · 32 APIs I: UniProt · 33 APIs II: RCSB PDB, descargas y mapeo de IDs · 34 APIs III: PubChem, ChEMBL y ChEBI · 35 APIs IV: Entrez y cBioPortal · 36 RDKit I · 37 RDKit II · 38 Proyectos de repaso |
 | 🤖 Machine learning | 39 Flujo de trabajo y regresión lineal · 40 Regresión polinómica y sobreajuste · 41 Clasificación y fronteras de decisión · 42 Evaluar clasificadores (pingüinos) · 43 Texto y redes neuronales (opiniones de Amazon y dígitos) · 44 Clustering (K-means y DBSCAN) |
 | 🧠 Deep learning | 45 Redes neuronales con Keras (cáncer de mama) · 46 Redes convolucionales y el modelo de clase (con pizarra para dibujar dígitos) · 47 API funcional y HOG · 48 Imágenes propias, aumento de datos y webcam · 49 PyTorch y el bucle de entrenamiento |
+
+## Portada y herramientas de estudio
+La portada muestra los 7 bloques en pirámide (Fundamentos arriba; después Intermedio, Avanzado y Ciencia de datos; abajo Bioinformática, Machine learning y Deep learning). Cada bloque tiene su página con cinco pestañas:
+- **Mapa mental**: el bloque en el centro, sus módulos y las ideas clave de cada uno; los módulos son enlaces y los completados se marcan.
+- **Apuntes**: el resumen teórico de todos los módulos, sus ideas clave y sus errores habituales, imprimible o exportable a PDF.
+- **Conceptos clave**: glosario con las definiciones del bloque (las de los módulos más un glosario básico) y un buscador.
+- **Autoevaluación**: 10 preguntas al azar del banco del bloque, con puntuación.
+- **Módulos**: la lista con tu progreso.
+Cada módulo empieza con sus ideas clave y un acceso al mapa y los apuntes de su bloque.
 
 ## Atajos
 `Ctrl+Enter` (o `Shift+Enter`) ejecuta la celda · `Ctrl+K` o `/` abre la búsqueda de módulos · `Alt+←` / `Alt+→` cambian de módulo · `Esc` cierra la búsqueda.
@@ -39,9 +48,11 @@ Explicación breve · celdas editables (`Ctrl+Enter` ejecuta, `Tab` indenta) · 
     │   ├── modules-bio.js      → bioinformática
     │   ├── modules-ml.js       → machine learning
     │   ├── modules-dl.js       → deep learning
-    │   └── modelo_mnist.js     → modelo convolucional de clase (se carga solo al usarlo)
+    │   ├── modelo_mnist.js     → modelo convolucional de clase (se carga solo al usarlo)
+    │   └── mapas.js            → ideas clave, introducciones de bloque y glosario básico
     ├── pyRunner.js             → motor Pyodide: librerías, gráficos, APIs, autocorrección
     ├── progress.js             → progreso (localStorage, exportar/importar)
+    ├── estudio.js              → portada en pirámide y páginas de bloque (mapa, apuntes, glosario, test)
     └── app.js                  → navegación, búsqueda, bienvenida, certificado, tema
 ```
 
@@ -71,6 +82,7 @@ Funcionan igual en tu ordenador con Jupyter (`pip install rdkit seaborn`).
 Cada módulo es un objeto `{id, cat, title, body}` en `js/data/`. Helpers: `codeBlock`, `staticCode`, `exercise(título, enunciado, inicial, explicación, test, solución)`, `quiz`, `tip`, `warn`, `concepto`, `resumen`, `origen`.
 
 ## Historial
+- **v2.8** — Nueva portada con los 7 bloques en pirámide y una página por bloque con mapa mental (SVG generado a partir de las ideas clave de cada módulo), apuntes imprimibles, glosario con buscador, autoevaluación con puntuación y lista de módulos. Ideas clave al principio de cada módulo. Glosario básico de 24 términos para los bloques iniciales. La web arranca siempre en la portada, con un botón para continuar donde lo dejaste. Los bloques también se pueden buscar con Ctrl+K y recorrer con Alt+flechas.
 - **v2.7** — Deep learning (clases 13 y 14). Nuevo bloque de 5 módulos (45-49): redes neuronales con Keras sobre cáncer de mama (con la red equivalente entrenada en el navegador), redes convolucionales con el **modelo `modelo_mnist_convol.h5` de clase** leído con h5py e implementado en NumPy (resultados idénticos a Keras, diferencia máxima 3·10⁻⁷), filtros y mapas de activación, **pizarra para dibujar dígitos** y verlos reconocer en directo, API funcional con HOG, lectura de imágenes desde ZIP y carpetas, aumento de datos, uso de modelos con la webcam y un bucle de entrenamiento de PyTorch escrito en NumPy. Cuadernos de Colab para Keras y PyTorch; el código de Keras se ha ejecutado con TensorFlow 2.17. Errores de los scripts explicados: escalado antes de separar, `np.random.seed` que no fija TensorFlow, evaluación del modelo equivocado y forma (784, 1) en el cuaderno de TensorBoard, etiqueta con `file[-5]`, ruta del ZIP sobrescrita, volteos verticales en el aumento de datos, `waitKey` doble en la webcam, capas compartidas en la API funcional, `testloader` sin usar y `train_test_split` sobre un Dataset de PyTorch.
 - **v2.6** — Repaso de la clase 8 y machine learning. Módulo 31: el script de interacciones (Script5), con lo que detecta de verdad un umbral de 3,7 Å entre Cα y una alternativa con contactos no locales. Módulo 35: cBioPortal paso a paso (estudio, muestras, datos clínicos de paciente en formato ancho) y pybioportal. Módulo 38: proyectos E (PDB → UniProt → PubChem, Script1) y F (proteínas de neurodegeneración con pI y peso, Script2). Nuevo bloque de machine learning (módulos 39-44) con los scripts de regresión lineal (diabetes), regresión polinómica (California), el cuaderno de métodos supervisados (fronteras de decisión), pingüinos, opiniones de Amazon, redes neuronales con dígitos y clustering con K-means y DBSCAN. Datos añadidos: `penguins.csv` y una muestra de 3000 reseñas de `amazon_baby.csv`. Errores de los scripts explicados: listas de error de entrenamiento y prueba cruzadas, pipeline ajustado antes de separar, red neuronal con `activation='identity'` (lineal), `fit_transform` sobre datos nuevos, regresión lineal usada como clasificador, stopwords eliminadas antes de pasar a minúsculas (y la eliminación de 'not'), ejes de latitud y longitud intercambiados, rutas de archivo pegadas, `entryType` siempre verdadero, comillas anidadas en f-strings (solo válidas desde Python 3.12). Nuevo icono de la web (doble hélice) como favicon y en la barra superior.
 - **v2.5** — Biopython de la clase 6 integrado (BIOPYTHON_1 a 4): validación de secuencias y `count_overlap`, GC calculado por error sobre una proteína, buscador de ORFs con la secuencia original completa y ejercicio de ORFs en las dos hebras, descarga de FASTA desde UniProt, probabilidad de error media frente a errores esperados por lectura, control de calidad tipo FastQC con 400 lecturas, árboles de distancias con `Bio.Phylo`, secuencias reales de hemoglobina e insulina desde UniProt, alineamiento múltiple real con Clustal Omega (API del EBI) y análisis completo de 1TUP (cadenas, `_mmcif_dict` frente a `MMCIF2Dict`, heteromoléculas a CSV). `1TUP.pdb`, `1TUP.cif` y `ejemplo_qc.fastq` añadidos al disco virtual. Rediseño completo con estética de IDE: explorador de archivos, pestaña, celdas con resaltado de sintaxis y numeración `In [n]` (CodeMirror), barra de estado del intérprete, paleta de comandos (Ctrl+K) que busca también dentro del contenido, portada con cromatograma de TP53, ejercicios superados que se recuerdan, tipografía IBM Plex + JetBrains Mono, paleta basada en los canales de un cromatograma y tema claro/oscuro.
