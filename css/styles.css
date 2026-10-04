@@ -535,3 +535,46 @@ details.sol-d[open] summary::before{transform:rotate(45deg)}
   body.imprimiendo-apuntes .chips span{border-color:#bbb}
 }
 [data-theme="light"] .mm-center text{fill:#fff}
+
+/* ==========================================================================
+   v2.9 · Pirámide alineada, explorador plegable y baldosas con estado
+   ========================================================================== */
+/* Cada bloque en su fila y su columna (1 arriba en el centro, 3 y 3 debajo) */
+.pyramid .t1{grid-row:1;grid-column:2}
+.pyramid .t2{grid-row:2;grid-column:1} .pyramid .t3{grid-row:2;grid-column:2} .pyramid .t4{grid-row:2;grid-column:3}
+.pyramid .t5{grid-row:3;grid-column:1} .pyramid .t6{grid-row:3;grid-column:2} .pyramid .t7{grid-row:3;grid-column:3}
+.tile{min-height:178px}
+.t-desc{flex:1}
+.t-state{font:500 12px/1 var(--font-ui);color:var(--muted);white-space:nowrap}
+.tile.rec{border-color:color-mix(in srgb,var(--cat) 70%,var(--line));box-shadow:0 0 0 1px color-mix(in srgb,var(--cat) 55%,transparent),0 18px 36px -24px color-mix(in srgb,var(--cat) 70%,transparent)}
+.tile.rec .t-state{color:var(--cat);font-weight:600}
+.tile.hecho .t-state{color:var(--a)}
+
+/* Botón ☰ visible siempre: en escritorio pliega el explorador, en móvil abre el cajón */
+#drawerBtn{display:grid}
+.ex-acts{display:flex;align-items:center;gap:4px}
+.ex-icon{display:grid;place-items:center;width:24px;height:24px;border:0;border-radius:var(--r-s);background:none;color:var(--muted);cursor:pointer}
+.ex-icon:hover{background:var(--surface);color:var(--text)}
+.ex-icon svg{width:14px;height:14px}
+#foldAllBtn.expandir svg{transform:rotate(180deg)}
+.ex-acts .ex-count{margin-right:4px}
+
+/* Explorador plegado: franja de 58 px con accesos */
+#rail{display:none;flex-direction:column;align-items:center;gap:5px;padding:10px 0;overflow-y:auto}
+.rail-btn{position:relative;display:grid;place-items:center;width:40px;min-height:38px;padding:4px 0;border:1px solid transparent;border-radius:var(--r-m);background:none;color:var(--text-2);cursor:pointer}
+.rail-btn:hover{background:var(--surface);border-color:var(--line);color:var(--text)}
+.rail-btn.active{background:var(--c-soft);border-color:var(--line-2);color:var(--text)}
+.rail-btn svg{width:16px;height:16px}
+.rail-sw{display:grid;place-items:center;width:22px;height:22px;border-radius:6px;background:color-mix(in srgb,var(--cat) 22%,transparent);border:1px solid var(--cat);color:var(--text);font:600 11.5px/1 var(--font-code)}
+.rail-bar{display:block;width:22px;height:3px;margin-top:4px;border-radius:2px;background:var(--line);overflow:hidden}
+.rail-bar b{display:block;height:100%;background:var(--cat)}
+.rail-sep{width:26px;height:1px;background:var(--line);margin:3px 0}
+@media (min-width:821px){
+  body.explorer-rail{--explorer-w:58px}
+  body.explorer-rail #explorer .ex-top,body.explorer-rail #explorer #navList,body.explorer-rail #explorer .ex-foot{display:none}
+  body.explorer-rail #rail{display:flex}
+}
+@media (max-width:820px){
+  .pyramid .tile{grid-row:auto!important;grid-column:auto!important}
+  .ex-acts .ex-icon:last-child{display:none}
+}

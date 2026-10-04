@@ -49,12 +49,13 @@ function toggleFolder(cat){
 }
 function renderNav(){
   const p = getProgress(), q = norm($('searchBox').value || '').trim(), cerradas = getClosed();
+  const catActual = esBloque(currentId) ? currentId.slice(2) : (typeof currentId === 'number' && modulo(currentId) ? modulo(currentId).cat : null);
   let html = q ? '' : `<ul class="files"><li><button class="file ${currentId === 0 ? 'active' : ''}" onclick="goTo(0)"><span class="num">~</span><span class="ftitle">Portada</span></button></li></ul>`;
   for(const cat of CATS){
     const todos = MODULES.filter(m => m.cat === cat);
     const mods = q ? todos.filter(m => norm(`${m.id} ${m.title} ${fileName(m)}`).includes(q)) : todos;
     if(!mods.length) continue;
-    const hechos = todos.filter(m => p[m.id]).length, cerrada = !q && cerradas.includes(cat);
+    const hechos = todos.filter(m => p[m.id]).length, cerrada = !q && cerradas.includes(cat) && cat !== catActual;
     html += `<div class="folder ${cerrada ? 'closed' : ''}" style="--cat:${CAT_INFO[cat].color}">
       <button class="folder-head" onclick="toggleFolder('${cat}')" aria-expanded="${!cerrada}">
         <svg class="chev" viewBox="0 0 12 12" aria-hidden="true"><path d="m3 4.5 3 3 3-3"/></svg><span class="swatch"></span>${cat}<span class="fcount">${hechos}/${todos.length}</span>
@@ -67,6 +68,13 @@ function renderNav(){
     html += `<ul class="files" style="margin-top:8px"><li><button class="file ${currentId === 'cert' ? 'active' : ''}" onclick="goTo('cert')"><span class="num">✓</span><span class="ftitle">Certificado</span><span class="state ${countDone() === MODULES.length ? 'done' : ''}"></span></button></li></ul>`;
   }
   $('navList').innerHTML = html;
+  const todasCerradas = cerradas.length >= CATS.length;
+  $('foldAllBtn').title = todasCerradas ? 'Expandir todas las carpetas' : 'Contraer todas las carpetas';
+  $('foldAllBtn').setAttribute('aria-label', $('foldAllBtn').title);
+  $('foldAllBtn').classList.toggle('expandir', todasCerradas);
+  const activo = $('navList').querySelector('.file.active');
+  if(activo && activo.scrollIntoView) activo.scrollIntoView({block: 'nearest'});
+  renderRail();
 }
 
 /* ---------- Ruta y pestaña ---------- */
@@ -249,7 +257,34 @@ $('palette').addEventListener('click', e => { if(e.target.id === 'palette') clos
 /* ---------- Cajón (móvil) ---------- */
 function openDrawer(){ document.body.classList.add('drawer-open'); $('drawerBtn').setAttribute('aria-expanded', 'true'); }
 function closeDrawer(){ document.body.classList.remove('drawer-open'); $('drawerBtn').setAttribute('aria-expanded', 'false'); }
-$('drawerBtn').addEventListener('click', () => document.body.classList.contains('drawer-open') ? closeDrawer() : openDrawer());
+const RAIL_KEY = 'py101_rail_v1';
+const esMovil = () => window.matchMedia('(max-width: 820px)').matches;
+function toggleExplorer(){
+  if(esMovil()){ document.body.classList.contains('drawer-open') ? closeDrawer() : openDrawer(); return; }
+  const plegado = !document.body.classList.contains('explorer-rail');
+  document.body.classList.toggle('explorer-rail', plegado);
+  $('drawerBtn').setAttribute('aria-expanded', String(!plegado));
+  try{ localStorage.setItem(RAIL_KEY, plegado ? '1' : '0'); }catch(e){}
+}
+$('drawerBtn').addEventListener('click', toggleExplorer);
+function plegarTodo(){
+  const contraer = getClosed().length < CATS.length;
+  try{ localStorage.setItem(FOLD_KEY, JSON.stringify(contraer ? [...CATS] : [])); }catch(e){}
+  renderNav();
+}
+/* Franja estrecha que se ve con el explorador plegado: portada, un acceso por bloque y certificado */
+function renderRail(){
+  const p = getProgress();
+  const boton = (id, contenido, titulo, extra = '') => `<button class="rail-btn ${currentId === id || (esBloque(id) && typeof currentId === 'number' && modulo(currentId) && 'b:' + modulo(currentId).cat === id) ? 'active' : ''}" ${extra} onclick="goTo(${typeof id === 'string' ? `'${id}'` : id})" title="${titulo}" aria-label="${titulo}">${contenido}</button>`;
+  $('rail').innerHTML = `<button class="rail-btn" onclick="toggleExplorer()" title="Mostrar el explorador (Ctrl+B)" aria-label="Mostrar el explorador">
+      <svg viewBox="0 0 16 16" aria-hidden="true"><path d="m6.5 4 4 4-4 4M3 4v8"/></svg></button>
+    <span class="rail-sep"></span>
+    ${boton(0, '<svg viewBox="0 0 16 16" aria-hidden="true"><path d="M2.5 7.5 8 3l5.5 4.5V13h-11z"/></svg>', 'Portada')}
+    ${CATS.map((c, i) => { const mods = MODULES.filter(m => m.cat === c), h = mods.filter(m => p[m.id]).length;
+      return boton('b:' + c, `<span class="rail-sw">${i + 1}</span><i class="rail-bar"><b style="width:${h / mods.length * 100}%"></b></i>`, `Bloque ${i + 1}: ${c} (${h}/${mods.length})`, `style="--cat:${CAT_INFO[c].color}"`); }).join('')}
+    <span class="rail-sep"></span>
+    ${boton('cert', '<svg viewBox="0 0 16 16" aria-hidden="true"><path d="m3 8.5 3 3 7-7"/></svg>', 'Certificado')}`;
+}
 
 /* ---------- Tema ---------- */
 function initTheme(){
@@ -274,6 +309,7 @@ $('pane').addEventListener('scroll', updateReadProgress, {passive: true});
 document.addEventListener('keydown', e => {
   const enCampo = e.target.closest && (e.target.closest('.CodeMirror') || ['INPUT', 'TEXTAREA'].includes(e.target.tagName));
   if((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k'){ e.preventDefault(); $('palette').hidden ? openPalette() : closePalette(); return; }
+  if((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'b'){ e.preventDefault(); toggleExplorer(); return; }
   if(e.key === 'Escape'){ if(!$('palette').hidden) closePalette(); closeDrawer(); return; }
   if(!$('palette').hidden) return;
   if(e.altKey && e.key === 'ArrowLeft'){ e.preventDefault(); vecino(-1); return; }
@@ -287,6 +323,7 @@ document.addEventListener('keydown', e => {
 /* ---------- Inicio ---------- */
 (function(){
   initTheme();
+  try{ if(localStorage.getItem(RAIL_KEY) === '1' && !esMovil()){ document.body.classList.add('explorer-rail'); $('drawerBtn').setAttribute('aria-expanded', 'false'); } }catch(e){}
   initPyodide();
   currentId = 0;                     // siempre se empieza en la portada; "Continuar" lleva al último módulo
   $('searchBox').addEventListener('input', renderNav);

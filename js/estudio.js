@@ -25,15 +25,15 @@ function barajar(a){ const b = a.slice(); for(let i = b.length - 1; i > 0; i--){
 function renderWelcome(){
   const total = MODULES.length, hechos = countDone(), p = getProgress();
   const guardado = parseInt(localStorage.getItem(LAST_KEY)), ultimo = modulo(guardado) ? guardado : null;
+  const recomendado = CATS.find(c => MODULES.some(m => m.cat === c && !p[m.id]));
   const tiles = CATS.map((cat, i) => {
     const mods = MODULES.filter(m => m.cat === cat), h = mods.filter(m => p[m.id]).length;
-    const temas = mods.slice(0, 3).map(m => tituloCorto(m, 22)).join(', ');
-    return `<button class="tile t${i + 1}" style="--cat:${CAT_INFO[cat].color}" onclick="goTo('b:${cat}')" aria-label="Bloque ${i + 1}: ${cat}, ${h} de ${mods.length} módulos completados">
+    const estado = h === mods.length ? 'Completado' : cat === recomendado ? 'Siguiente paso' : h ? 'En curso' : 'Sin empezar';
+    return `<button class="tile t${i + 1}${cat === recomendado ? ' rec' : ''}${h === mods.length ? ' hecho' : ''}" style="--cat:${CAT_INFO[cat].color}" onclick="goTo('b:${cat}')" aria-label="Bloque ${i + 1}: ${cat}, ${h} de ${mods.length} módulos completados">
       <span class="t-top"><span class="t-num">Bloque ${i + 1}</span><span class="t-range">${mods[0].id}–${mods[mods.length - 1].id}</span></span>
       <span class="t-title">${cat}</span>
       <span class="t-desc">${CAT_INFO[cat].desc}</span>
-      <span class="t-temas">${temas}…</span>
-      <span class="t-foot"><span class="mini-bar"><i style="width:${h / mods.length * 100}%"></i></span><span class="t-count">${h}/${mods.length}</span></span>
+      <span class="t-foot"><span class="t-state">${estado}</span><span class="mini-bar"><i style="width:${h / mods.length * 100}%"></i></span><span class="t-count">${h}/${mods.length}</span></span>
     </button>`;
   }).join('');
   const archivos = Object.keys(DATASETS).map(f => `<code>${f}</code>`).join('');

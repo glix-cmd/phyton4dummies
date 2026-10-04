@@ -19,7 +19,7 @@
 <div id="app">
 
   <header id="topbar">
-    <button id="drawerBtn" class="icon-btn" aria-label="Abrir el explorador de módulos" aria-controls="explorer" aria-expanded="false">
+    <button id="drawerBtn" class="icon-btn" aria-label="Mostrar u ocultar el explorador (Ctrl+B)" title="Mostrar u ocultar el explorador (Ctrl+B)" aria-controls="explorer" aria-expanded="true">
       <svg viewBox="0 0 20 20" aria-hidden="true"><path d="M3 5h14M3 10h14M3 15h14"/></svg>
     </button>
     <a class="brand" href="#" onclick="goTo(0); return false;" aria-label="Ir a la portada">
@@ -43,7 +43,13 @@
     <div class="ex-top">
       <div class="ex-title">
         <span>Explorador</span>
-        <span id="progressText" class="ex-count"></span>
+        <span class="ex-acts">
+          <span id="progressText" class="ex-count"></span>
+          <button id="foldAllBtn" class="ex-icon" onclick="plegarTodo()" title="Contraer todas las carpetas" aria-label="Contraer todas las carpetas">
+            <svg viewBox="0 0 16 16" aria-hidden="true"><path d="m4.5 6 3.5-3 3.5 3M4.5 10l3.5 3 3.5-3"/></svg></button>
+          <button class="ex-icon" onclick="toggleExplorer()" title="Ocultar el explorador (Ctrl+B)" aria-label="Ocultar el explorador">
+            <svg viewBox="0 0 16 16" aria-hidden="true"><path d="m9.5 4-4 4 4 4M13 4v8"/></svg></button>
+        </span>
       </div>
       <div id="progressBar" role="progressbar" aria-label="Progreso del curso"><div id="progressFill"></div></div>
       <label class="filter">
@@ -52,6 +58,7 @@
       </label>
     </div>
     <nav id="navList"></nav>
+    <nav id="rail" aria-label="Accesos rápidos a los bloques"></nav>
     <div class="ex-foot">
       <button id="exportBtn" class="ghost-btn" title="Descargar tu progreso como archivo .json">Exportar progreso</button>
       <button class="ghost-btn" onclick="document.getElementById('importInput').click()" title="Cargar un archivo de progreso">Importar</button>
